@@ -1,0 +1,431 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1">
+<title>SIRVOX V7.9 LECTEUR PRO PDF</title>
+<!-- Bibliothèques pour DOCX et PDF -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
+<script>
+  pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js';
+</script>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;font-family:Arial}
+body{background:#f4f4f6;color:#222}
+.app{max-width:520px;margin:0 auto;padding:8px;padding-bottom:100px;transition:.3s}
+.app.desktop{max-width:1100px;display:grid;grid-template-columns:1.6fr 1fr;gap:10px}
+.app.desktop header{grid-column:1/3}
+header{display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid #ddd}
+.logo{display:flex;align-items:center;gap:10px}
+h1{font-size:20px;letter-spacing:2px;font-weight:800;color:#111}
+h1 span{color:#39ff14;}
+.card{background:#ffffff;border-radius:16px;padding:12px;margin-top:10px;border:1px solid #e0e0e0;box-shadow:0 4px 10px rgba(0,0,0,0.05)}
+label{font-size:9px;color:#666;letter-spacing:1px;display:block;margin-bottom:5px;font-weight:bold}
+.btn{padding:12px;border:none;border-radius:12px;font-weight:bold;cursor:pointer;font-size:13px}
+.btn-play{background:#39ff14;color:#121212;flex:1}
+.btn-stop{background:#e0e0e0;color:#222;flex:1}
+.btn-sec{background:#f0f0f2;color:#333;border:1px solid #dcdce0;padding:8px 12px;border-radius:8px;font-size:11px;cursor:pointer;flex:1;text-align:center}
+.btn-sec:hover{background:#e4e4e8}
+.controls{display:flex;gap:6px;margin-top:8px}
+.progress{height:6px;background:#e0e0e0;border-radius:3px;margin-top:8px;overflow:hidden}
+.progress div{height:100%;background:#39ff14;width:0%}
+.lang-list{display:flex;gap:6px;margin-top:5px}
+.lang-badge{font-size:11px;padding:6px 12px;border-radius:20px;background:#f0f0f2;border:1px solid #dcdce0;cursor:pointer;color:#555;font-weight:bold}
+.lang-badge.active{background:#39ff14;color:#121212;border-color:#39ff14}
+.pdf-viewer{max-height:200px;overflow:auto;background:#fafafa;border-radius:10px;border:1px solid #e0e0e0;margin-top:6px;padding:6px;display:none}
+.pdf-page{padding:6px;border-bottom:1px solid #eee;cursor:pointer;font-size:11px;color:#444}
+.pdf-page.active{background:#39ff1420;border-left:2px solid #39ff14;color:#111}
+.list-item{background:#f8f8fa;padding:8px 10px;border-radius:8px;margin-top:6px;display:flex;justify-content:space-between;align-items:center;border:1px solid #e0e0e0;font-size:12px;color:#222}
+.highlight-word { background-color: #39ff14; color: #121212; padding: 2px 4px; border-radius: 4px; font-weight: bold; }
+input[type=range]{accent-color:#39ff14}
+</style>
+</head>
+<body>
+<div class="app" id="app">
+<header>
+<div class="logo"><h1>SIR<span>VOX</span></h1></div>
+<div style="display:flex;gap:5px"><button class="btn-sec" id="layoutBtn" style="flex:0;padding:6px 10px;">MODE BUREAU</button><button class="btn-sec" id="frBtn" style="background:#39ff14;color:#121212;font-weight:bold;flex:0;padding:6px 12px;">FR</button><button class="btn-sec" id="enBtn" style="flex:0;padding:6px 12px;">EN</button></div>
+</header>
+
+<div>
+<div class="card">
+<div style="display:flex;justify-content:space-between"><label id="lDoc">DOCUMENT - LECTEUR HORS LIGNE</label><span id="storageInfo" style="font-size:9px;color:#27ae60">0 Docs</span></div>
+<input type="file" id="fileInput" accept=".txt,.docx,.pdf" hidden>
+<div style="display:flex;gap:5px"><button class="btn-sec" id="openBtn">OUVRIR</button><button class="btn-sec" id="pagesBtn">PAGES X-Y</button><button class="btn-sec" id="searchBtn">RECHERCHER</button></div>
+
+<div style="display:flex;justify-content:space-between;align-items:center;margin-top:8px;">
+<label id="lChooseLang" style="margin:0;">LANGUE DE LECTURE :</label>
+<div style="display:flex;gap:4px;"><button class="btn-sec" onclick="changeFontSize(1)" style="padding:2px 8px;font-size:10px;">TAILLE +</button><button class="btn-sec" onclick="changeFontSize(-1)" style="padding:2px 8px;font-size:10px;">TAILLE -</button></div>
+</div>
+<div class="lang-list" id="langList"></div>
+
+<div id="textDisplay" contenteditable="true" style="width:100%;height:240px;background:#fafafa;border:1px solid #dcdce0;border-radius:12px;padding:12px;color:#222;font-size:14px;overflow-y:auto;line-height:1.6;margin-top:8px;">Copier le texte ou importer un document.</div>
+<div id="pdfViewer" class="pdf-viewer"></div>
+
+<div style="display:flex;gap:6px;margin-top:6px">
+<input type="text" id="searchInput" placeholder="Rechercher dans le texte..." style="flex:1;background:#fafafa;border:1px solid #dcdce0;border-radius:8px;padding:6px;color:#222;display:none;font-size:12px;">
+<button class="btn-sec" id="bookmarkBtn">AJOUTER MARQUE-PAGE</button>
+</div>
+
+<div class="progress"><div id="prog"></div></div>
+<div style="display:flex;justify-content:space-between;margin-top:4px"><span id="pageInfo" style="font-size:10px;color:#666">Page 1/1</span><span id="pctInfo" style="font-size:10px;color:#27ae60;font-weight:bold">0%</span><span id="wordCount" style="font-size:10px;color:#666">0 mots</span></div>
+</div>
+
+<div class="card">
+<label id="lTone">RÉGLAGES AUDIO ET PRÉRÉGLAGES</label>
+<div style="display:flex;gap:5px;margin-bottom:8px;">
+<button class="btn-sec" onclick="setPreset('normal')">PRÉRÉGLAGE NORMAL</button>
+<button class="btn-sec" onclick="setPreset('rapide')">PRÉRÉGLAGE RAPIDE</button>
+<button class="btn-sec" onclick="setPreset('cinema')">PRÉRÉGLAGE CINÉMA</button>
+</div>
+
+<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px">
+<div><label><span id="lSpeed">Vitesse</span> <span id="rv">1.0</span></label><input type="range" id="rate" min="0.5" max="2" step="0.1" value="1" style="width:100%"></div>
+<div><label><span id="lTon">Ton</span> <span id="pv">1.0</span></label><input type="range" id="pitch" min="0.5" max="1.5" step="0.1" value="1" style="width:100%"></div>
+<div><label><span id="lVolume">Volume</span> <span id="vv">100%</span></label><input type="range" id="vol" min="0" max="1" step="0.1" value="1" style="width:100%"></div>
+</div>
+</div>
+</div>
+
+<div>
+<div class="card">
+<div class="controls"><button class="btn btn-play" id="playPauseBtn">LIRE / PAUSE</button><button class="btn btn-stop" id="stopBtn">ARRÊTER</button></div>
+<div class="controls"><button class="btn-sec" id="prevBtn">PAGE PRÉCÉDENTE</button><button class="btn-sec" id="nextBtn">PAGE SUIVANTE</button><button class="btn-sec" id="saveBtn">SAUVEGARDER</button></div>
+</div>
+<div class="card"><label id="lLib">BIBLIOTHÈQUE DE COURS / LIVRES</label><div id="libList"></div></div>
+<div class="card"><label id="lBook">MARQUES-PAGES</label><div id="bookmarks"></div></div>
+<div class="card"><label id="lHist">HISTORIQUE DE LECTURE</label><div id="historyList"></div></div>
+</div>
+</div>
+
+<script>
+let synth=window.speechSynthesis,selectedLang='fr-FR',allText='',pages=[''],currentPage=0,uiLang='fr',isPlaying=false,isPaused=false,currentUtterance=null,charCursor=0,currentFontSize=14;
+let db=JSON.parse(localStorage.getItem('sirvox_v79')||'{"docs":[],"bookmarks":[],"history":[]}');
+const langs=[{code:'fr-FR',name:'Français'},{code:'en-US',name:'English'}];
+
+const i18n={
+fr:{
+ doc:"DOCUMENT - LECTEUR HORS LIGNE", open:"OUVRIR", pages:"PAGES X-Y", search:"RECHERCHER", 
+ chooseLang:"LANGUE DE LECTURE :", defaultText:"Copier le texte ou importer un document.",
+ tone:"RÉGLAGES AUDIO ET PRÉRÉGLAGES", speed:"Vitesse", pitch:"Ton", vol:"Volume", 
+ play:"LIRE / PAUSE", pauseTxt:"PAUSE", resumeTxt:"REPRENDRE", stop:"ARRÊTER", 
+ page:"Page", words:"mots", empty:"Aucun", save:"SAUVEGARDER",
+ prevPage:"PAGE PRÉCÉDENTE", nextPage:"PAGE SUIVANTE",
+ libTitle:"BIBLIOTHÈQUE DE COURS / LIVRES", bookTitle:"MARQUES-PAGES", histTitle:"HISTORIQUE DE LECTURE",
+ layout:"MODE BUREAU", bookmark:"AJOUTER MARQUE-PAGE", delete:"SUPPRIMER"
+},
+en:{
+ doc:"DOCUMENT - OFFLINE READER", open:"OPEN", pages:"PAGES X-Y", search:"SEARCH", 
+ chooseLang:"READING LANGUAGE:", defaultText:"Copy text or import a document.",
+ tone:"AUDIO SETTINGS & PRESETS", speed:"Speed", pitch:"Tone", vol:"Volume", 
+ play:"PLAY / PAUSE", pauseTxt:"PAUSE", resumeTxt:"RESUME", stop:"STOP", 
+ page:"Page", words:"words", empty:"None", save:"SAVE",
+ prevPage:"PREVIOUS PAGE", nextPage:"NEXT PAGE",
+ libTitle:"LIBRARY OF COURSES / BOOKS", bookTitle:"BOOKMARKS", histTitle:"READING HISTORY",
+ layout:"DESKTOP MODE", bookmark:"ADD BOOKMARK", delete:"DELETE"
+}
+};
+
+function renderLangList(){
+ document.getElementById('langList').innerHTML=langs.map(l=>`<span class="lang-badge ${l.code===selectedLang?'active':''}" onclick="setLanguage('${l.code}')">${l.name}</span>`).join('');
+}
+
+window.setLanguage=(code)=>{
+ selectedLang=code;
+ renderLangList();
+};
+
+function setUILang(l){
+ uiLang=l;let t=i18n[l];
+ document.getElementById('lDoc').innerText=t.doc;
+ document.getElementById('openBtn').innerText=t.open;
+ document.getElementById('pagesBtn').innerText=t.pages;
+ document.getElementById('searchBtn').innerText=t.search;
+ document.getElementById('lChooseLang').innerText=t.chooseLang;
+ document.getElementById('lTone').innerText=t.tone;
+ document.getElementById('lSpeed').innerText=t.speed;
+ document.getElementById('lTon').innerText=t.pitch;
+ document.getElementById('lVolume').innerText=t.vol;
+ if(!isPlaying && !isPaused) document.getElementById('playPauseBtn').innerText=t.play;
+ document.getElementById('stopBtn').innerText=t.stop;
+ document.getElementById('saveBtn').innerText=t.save;
+ document.getElementById('prevBtn').innerText=t.prevPage;
+ document.getElementById('nextBtn').innerText=t.nextPage;
+ document.getElementById('lLib').innerText=t.libTitle;
+ document.getElementById('lBook').innerText=t.bookTitle;
+ document.getElementById('lHist').innerText=t.histTitle;
+ document.getElementById('layoutBtn').innerText=t.layout;
+ document.getElementById('bookmarkBtn').innerText=t.bookmark;
+ 
+ if(textDisplay.innerText.trim()==="" || textDisplay.innerText===i18n.fr.defaultText || textDisplay.innerText===i18n.en.defaultText){
+  textDisplay.innerText=t.defaultText;
+ }
+ upd();
+ renderLib(); renderBm(); renderHist();
+}
+
+document.getElementById('frBtn').onclick=()=>{setUILang('fr');document.getElementById('frBtn').style.background='#39ff14';document.getElementById('frBtn').style.color='#121212';document.getElementById('enBtn').style.background='#f0f0f2';document.getElementById('enBtn').style.color='#333';};
+document.getElementById('enBtn').onclick=()=>{setUILang('en');document.getElementById('enBtn').style.background='#39ff14';document.getElementById('enBtn').style.color='#121212';document.getElementById('frBtn').style.background='#f0f0f2';document.getElementById('frBtn').style.color='#333';};
+document.getElementById('layoutBtn').onclick=()=>{let isDesk=document.getElementById('app').classList.toggle('desktop');document.getElementById('layoutBtn').innerText=isDesk?(uiLang==='fr'?'MODE MOBILE':'MOBILE MODE'):(uiLang==='fr'?'MODE BUREAU':'DESKTOP MODE');};
+
+let textDisplay=document.getElementById('textDisplay'),prog=document.getElementById('prog'),pageInfo=document.getElementById('pageInfo'),pdfViewer=document.getElementById('pdfViewer');
+
+textDisplay.oninput=()=>{
+ allText=textDisplay.innerText;
+ if(allText.trim() && allText!==i18n.fr.defaultText && allText!==i18n.en.defaultText){
+  splitPages(allText);
+ }
+ upd();
+};
+
+function changeFontSize(delta){
+ currentFontSize=Math.max(10, Math.min(28, currentFontSize+delta));
+ textDisplay.style.fontSize=currentFontSize+'px';
+}
+
+function setPreset(type){
+ if(type==='normal'){document.getElementById('rate').value=1;document.getElementById('pitch').value=1;document.getElementById('vol').value=1;}
+ if(type==='rapide'){document.getElementById('rate').value=1.5;document.getElementById('pitch').value=1.1;document.getElementById('vol').value=1;}
+ if(type==='cinema'){document.getElementById('rate').value=0.9;document.getElementById('pitch').value=0.8;document.getElementById('vol').value=1;}
+ document.getElementById('rv').innerText=document.getElementById('rate').value;
+ document.getElementById('pv').innerText=document.getElementById('pitch').value;
+ document.getElementById('vv').innerText=Math.round(document.getElementById('vol').value*100)+'%';
+}
+
+function upd(){
+ let rawText=textDisplay.innerText||"";
+ let w=rawText.trim().split(/\s+/).filter(Boolean).length;
+ document.getElementById('wordCount').innerText=w+' '+i18n[uiLang].words;
+ document.getElementById('storageInfo').innerText=db.docs.length+' Docs';
+}
+
+function splitPages(txt){
+ let cleaned = txt.replace(/\r\n/g, '\n');
+ let chunks = [];
+ let paragraphs = cleaned.split('\n\n');
+ let currentChunk = "";
+ 
+ for(let p of paragraphs){
+  if((currentChunk + "\n\n" + p).length > 1600){
+   if(currentChunk) chunks.push(currentChunk.trim());
+   currentChunk = p;
+  } else {
+   currentChunk += (currentChunk ? "\n\n" : "") + p;
+  }
+ }
+ if(currentChunk) chunks.push(currentChunk.trim());
+ 
+ pages = chunks.length > 0 ? chunks : [txt];
+ currentPage = 0;
+ showCurrentPage();
+ renderPdfViewer();
+ addHistory(txt.slice(0,40));
+}
+
+function showCurrentPage(){
+ let text=pages[currentPage]||"";
+ textDisplay.innerHTML=text.split('\n').map(p=>`<p style="margin-bottom:8px;">${p}</p>`).join('');
+ textDisplay.style.fontSize=currentFontSize+'px';
+ pageInfo.innerText=`${i18n[uiLang].page} ${currentPage+1}/${pages.length}`;
+ let pct=Math.round(((currentPage+1)/pages.length)*100);
+ document.getElementById('pctInfo').innerText=pct+'%';
+ upd();
+}
+
+function renderPdfViewer(){
+ if(pages.length<=1){pdfViewer.style.display='none';return;}
+ pdfViewer.style.display='block';
+ pdfViewer.innerHTML=pages.map((p,i)=>`<div class="pdf-page ${i===currentPage?'active':''}" onclick="goPage(${i})"><b>${i18n[uiLang].page} ${i+1}</b> - ${p.slice(0,50).replace(/</g,'&lt;')}...</div>`).join('');
+}
+
+window.goPage=(i)=>{
+ synth.cancel();
+ isPlaying=false; isPaused=false; charCursor=0;
+ document.getElementById('playPauseBtn').innerText=i18n[uiLang].play;
+ currentPage=i;
+ showCurrentPage();
+ renderPdfViewer();
+};
+
+function highlightWord(charIndex, text) {
+ if (charIndex < 0) return;
+ let words = text.split(" ");
+ let charCount = 0;
+ let targetWordIndex = 0;
+ 
+ for (let i = 0; i < words.length; i++) {
+  charCount += words[i].length + 1;
+  if (charCount >= charIndex) {
+   targetWordIndex = i;
+   break;
+  }
+ }
+ textDisplay.innerHTML = words.map((w, idx) => idx === targetWordIndex ? `<span class="highlight-word">${w}</span>` : w).join(" ");
+ textDisplay.style.fontSize=currentFontSize+'px';
+}
+
+function playPause(){
+ let btn = document.getElementById('playPauseBtn');
+ 
+ if(isPlaying){
+  synth.cancel();
+  isPaused=true;
+  isPlaying=false;
+  btn.innerText=i18n[uiLang].resumeTxt;
+  return;
+ }
+ 
+ if(isPaused){
+  isPaused=false;
+  isPlaying=true;
+  btn.innerText=i18n[uiLang].pauseTxt;
+  startSpeech(pages[currentPage]||"");
+  return;
+ }
+ 
+ synth.cancel();
+ charCursor=0;
+ let t=pages[currentPage]||textDisplay.innerText||"";
+ if(!t || t===i18n.fr.defaultText || t===i18n.en.defaultText) return;
+ 
+ isPlaying=true;
+ isPaused=false;
+ btn.innerText=i18n[uiLang].pauseTxt;
+ startSpeech(t);
+}
+
+function startSpeech(fullText){
+ let textToRead = fullText.slice(charCursor);
+ if(!textToRead.trim()){
+  isPlaying=false; isPaused=false;
+  document.getElementById('playPauseBtn').innerText=i18n[uiLang].play;
+  return;
+ }
+
+ currentUtterance=new SpeechSynthesisUtterance(textToRead);
+ currentUtterance.lang=selectedLang;
+ currentUtterance.rate=parseFloat(document.getElementById('rate').value);
+ currentUtterance.pitch=parseFloat(document.getElementById('pitch').value);
+ currentUtterance.volume=parseFloat(document.getElementById('vol').value);
+ 
+ currentUtterance.onboundary=e=>{
+  if(e.name==='word'){
+   try{
+    let absoluteCharIndex=charCursor+e.charIndex;
+    highlightWord(absoluteCharIndex, fullText);
+    prog.style.width=(absoluteCharIndex/fullText.length*100)+'%';
+    let pct=Math.round((absoluteCharIndex/fullText.length)*100);
+    document.getElementById('pctInfo').innerText=pct+'%';
+   }catch(err){}
+  }
+ };
+ 
+ currentUtterance.onend=()=>{
+  if(!isPaused && isPlaying){
+   prog.style.width='100%';
+   document.getElementById('pctInfo').innerText='100%';
+   charCursor=0;
+   if(currentPage < pages.length - 1){
+    currentPage++;
+    showCurrentPage();
+    renderPdfViewer();
+    setTimeout(()=>{ playPause(); }, 300);
+   }else{
+    isPlaying=false; isPaused=false;
+    document.getElementById('playPauseBtn').innerText=i18n[uiLang].play;
+   }
+  }
+ };
+ 
+ currentUtterance.onerror=()=>{
+  if(!isPaused){
+   isPlaying=false; isPaused=false;
+   document.getElementById('playPauseBtn').innerText=i18n[uiLang].play;
+  }
+ };
+ 
+ synth.speak(currentUtterance);
+}
+
+document.getElementById('playPauseBtn').onclick=playPause;
+document.getElementById('stopBtn').onclick=()=>{
+ synth.cancel();
+ isPlaying=false; isPaused=false; charCursor=0;
+ document.getElementById('playPauseBtn').innerText=i18n[uiLang].play;
+ prog.style.width='0%';
+ document.getElementById('pctInfo').innerText='0%';
+ showCurrentPage();
+};
+
+document.getElementById('rate').oninput=e=>{document.getElementById('rv').innerText=e.target.value;};
+document.getElementById('pitch').oninput=e=>{document.getElementById('pv').innerText=e.target.value;};
+document.getElementById('vol').oninput=e=>{document.getElementById('vv').innerText=Math.round(e.target.value*100)+'%';};
+
+document.getElementById('openBtn').onclick=()=>document.getElementById('fileInput').click();
+document.getElementById('fileInput').onchange=async e=>{
+ let f=e.target.files[0];if(!f)return;
+ try{
+  let full="";
+  if(f.name.endsWith('.docx')){
+   let zip=new JSZip();
+   let content=await zip.loadAsync(f);
+   let xml=await content.file("word/document.xml").async("string");
+   let parser=new DOMParser();
+   let xmlDoc=parser.parseFromString(xml,"text/xml");
+   let paragraphs = xmlDoc.getElementsByTagName("w:p");
+   for(let p of paragraphs){
+    let texts = p.getElementsByTagName("w:t");
+    let pText = "";
+    for(let t of texts) pText += t.textContent;
+    if(pText.trim()) full += pText + "\n\n";
+   }
+  }else if(f.name.endsWith('.pdf')){
+   let arrayBuffer = await f.arrayBuffer();
+   let loadingTask = pdfjsLib.getDocument({data: arrayBuffer});
+   let pdfDoc = await loadingTask.promise;
+   for (let i = 1; i <= pdfDoc.numPages; i++) {
+    let page = await pdfDoc.getPage(i);
+    let textContent = await page.getTextContent();
+    let pageText = textContent.items.map(item => item.str).join(" ");
+    full += pageText + "\n\n";
+   }
+  }else{
+   full=await f.text();
+  }
+  allText=full;
+  splitPages(allText);
+ }catch(err){
+  alert('Erreur lors de la lecture du document.');
+ }
+};
+
+document.getElementById('pagesBtn').onclick=()=>{let r=prompt(`Total pages: ${pages.length}. Plage (ex: 1-3)`);if(r&&r.includes('-')){let [s]=r.split('-').map(x=>parseInt(x));currentPage=s-1;showCurrentPage();renderPdfViewer();}};
+document.getElementById('searchBtn').onclick=()=>{let inp=document.getElementById('searchInput');inp.style.display=inp.style.display==='none'?'block':'none';if(inp.style.display==='block')inp.focus();};
+document.getElementById('searchInput').oninput=e=>{let q=e.target.value.toLowerCase();if(!q)return;let idx=allText.toLowerCase().indexOf(q);if(idx>=0){let pg=Math.floor(idx/1600);currentPage=pg;showCurrentPage();renderPdfViewer();}};
+
+document.getElementById('bookmarkBtn').onclick=()=>{db.bookmarks.unshift({id:Date.now(),page:currentPage+1,t:pages[currentPage].slice(0,40)});localStorage.setItem('sirvox_v79',JSON.stringify(db));renderBm();};
+
+document.getElementById('prevBtn').onclick=()=>{if(currentPage>0){currentPage--;showCurrentPage();renderPdfViewer();}};
+document.getElementById('nextBtn').onclick=()=>{if(currentPage<pages.length-1){currentPage++;showCurrentPage();renderPdfViewer();}};
+document.getElementById('saveBtn').onclick=()=>{db.docs.unshift({id:Date.now(),title:'Livre/Cours '+(db.docs.length+1),text:allText.slice(0,50000),date:new Date().toLocaleString()});localStorage.setItem('sirvox_v79',JSON.stringify(db));renderLib();upd();};
+
+function addHistory(snippet){
+ db.history.unshift({id:Date.now(),t:snippet,date:new Date().toLocaleTimeString()});
+ if(db.history.length>10) db.history.pop();
+ localStorage.setItem('sirvox_v79',JSON.stringify(db));
+ renderHist();
+}
+
+function renderBm(){let el=document.getElementById('bookmarks');el.innerHTML=db.bookmarks.length?db.bookmarks.map(b=>`<div class="list-item"><div><b>Page ${b.page}</b> - ${b.t}...</div><button class="btn-sec" style="background:#ff3b3b15;color:#d9534f;border-color:#d9534f" onclick="delB(${b.id})">${i18n[uiLang].delete}</button></div>`).join(''):`<p style="color:#888;font-size:11px">${i18n[uiLang].empty}</p>`;}
+window.delB=id=>{db.bookmarks=db.bookmarks.filter(b=>b.id!=id);localStorage.setItem('sirvox_v79',JSON.stringify(db));renderBm();};
+
+function renderLib(){let el=document.getElementById('libList');el.innerHTML=db.docs.length?db.docs.map(d=>`<div class="list-item"><div><b>${d.title}</b><br><small style="color:#666">${d.date}</small></div><div style="display:flex;gap:4px;"><button class="btn-sec" onclick="loadDoc(${d.id})">${i18n[uiLang].open}</button><button class="btn-sec" style="background:#ff3b3b15;color:#d9534f;border-color:#d9534f" onclick="delDoc(${d.id})">${i18n[uiLang].delete}</button></div></div>`).join(''):`<p style="color:#888;font-size:11px">${i18n[uiLang].empty}</p>`;}
+window.loadDoc=id=>{let d=db.docs.find(x=>x.id===id);if(d){allText=d.text;splitPages(allText);upd();}};
+window.delDoc=id=>{db.docs=db.docs.filter(d=>d.id!=id);localStorage.setItem('sirvox_v79',JSON.stringify(db));renderLib();upd();};
+
+function renderHist(){let el=document.getElementById('historyList');el.innerHTML=db.history.length?db.history.map(h=>`<div class="list-item"><div><small style="color:#27ae60">${h.date}</small><br>${h.t}...</div></div>`).join(''):`<p style="color:#888;font-size:11px">${i18n[uiLang].empty}</p>`;}
+
+setUILang('fr');renderBm();renderLib();renderHist();renderLangList();
+</script>
+</body>
+</html>
