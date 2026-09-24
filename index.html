@@ -1,431 +1,1561 @@
 <!DOCTYPE html>
 <html lang="fr">
 <head>
-<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1">
-<title>SIRVOX V7.9 LECTEUR PRO PDF</title>
-<!-- Bibliothèques pour DOCX et PDF -->
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>SIRVOX V8.4 • Lecteur Pro</title>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#121214">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-192.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="SIRVOX">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
 <script>
-  pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js';
+  if (typeof pdfjsLib !== 'undefined') {
+    pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js';
+  } else {
+    console.warn('pdf.js failed to load from CDN — PDF import will be unavailable until the network allows it.');
+  }
 </script>
 <style>
-*{margin:0;padding:0;box-sizing:border-box;font-family:Arial}
-body{background:#f4f4f6;color:#222}
-.app{max-width:520px;margin:0 auto;padding:8px;padding-bottom:100px;transition:.3s}
-.app.desktop{max-width:1100px;display:grid;grid-template-columns:1.6fr 1fr;gap:10px}
+:root {
+  --bg: #f4f4f6;
+  --card: #ffffff;
+  --text: #222;
+  --muted: #666;
+  --border: #e0e0e0;
+  --accent: #b8f574;          /* vert citron doux */
+  --accent-strong: #39ff14;
+  --accent-text: #1a1a1a;
+  --soft: #f0f0f2;
+  --danger: #d9534f;
+  --progress-bg: #e0e0e0;
+}
+body.dark {
+  --bg: #121214;
+  --card: #1e1e22;
+  --text: #e8e8ec;
+  --muted: #999;
+  --border: #333;
+  --soft: #2a2a2e;
+  --progress-bg: #333;
+  --accent: #b8f574;
+  --accent-strong: #39ff14;
+  --accent-text: #121212;
+}
+*{margin:0;padding:0;box-sizing:border-box;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Arial,sans-serif}
+body{background:var(--bg);color:var(--text);transition:background .3s,color .3s}
+.app{max-width:520px;margin:0 auto;padding:10px;padding-bottom:180px;transition:.3s}
+.app.desktop{max-width:1100px;display:grid;grid-template-columns:1.6fr 1fr;gap:12px}
 .app.desktop header{grid-column:1/3}
-header{display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid #ddd}
-.logo{display:flex;align-items:center;gap:10px}
-h1{font-size:20px;letter-spacing:2px;font-weight:800;color:#111}
-h1 span{color:#39ff14;}
-.card{background:#ffffff;border-radius:16px;padding:12px;margin-top:10px;border:1px solid #e0e0e0;box-shadow:0 4px 10px rgba(0,0,0,0.05)}
-label{font-size:9px;color:#666;letter-spacing:1px;display:block;margin-bottom:5px;font-weight:bold}
-.btn{padding:12px;border:none;border-radius:12px;font-weight:bold;cursor:pointer;font-size:13px}
-.btn-play{background:#39ff14;color:#121212;flex:1}
-.btn-stop{background:#e0e0e0;color:#222;flex:1}
-.btn-sec{background:#f0f0f2;color:#333;border:1px solid #dcdce0;padding:8px 12px;border-radius:8px;font-size:11px;cursor:pointer;flex:1;text-align:center}
-.btn-sec:hover{background:#e4e4e8}
-.controls{display:flex;gap:6px;margin-top:8px}
-.progress{height:6px;background:#e0e0e0;border-radius:3px;margin-top:8px;overflow:hidden}
-.progress div{height:100%;background:#39ff14;width:0%}
-.lang-list{display:flex;gap:6px;margin-top:5px}
-.lang-badge{font-size:11px;padding:6px 12px;border-radius:20px;background:#f0f0f2;border:1px solid #dcdce0;cursor:pointer;color:#555;font-weight:bold}
-.lang-badge.active{background:#39ff14;color:#121212;border-color:#39ff14}
-.pdf-viewer{max-height:200px;overflow:auto;background:#fafafa;border-radius:10px;border:1px solid #e0e0e0;margin-top:6px;padding:6px;display:none}
-.pdf-page{padding:6px;border-bottom:1px solid #eee;cursor:pointer;font-size:11px;color:#444}
-.pdf-page.active{background:#39ff1420;border-left:2px solid #39ff14;color:#111}
-.list-item{background:#f8f8fa;padding:8px 10px;border-radius:8px;margin-top:6px;display:flex;justify-content:space-between;align-items:center;border:1px solid #e0e0e0;font-size:12px;color:#222}
-.highlight-word { background-color: #39ff14; color: #121212; padding: 2px 4px; border-radius: 4px; font-weight: bold; }
-input[type=range]{accent-color:#39ff14}
+header{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;gap:8px;padding:12px 0;border-bottom:1px solid var(--border)}
+.logo h1{font-size:22px;letter-spacing:2px;font-weight:800;color:var(--text)}
+.logo h1 span{color:var(--accent-strong)}
+.card{background:var(--card);border-radius:16px;padding:14px;margin-top:12px;border:1px solid var(--border);box-shadow:0 4px 12px rgba(0,0,0,.06)}
+label{font-size:10px;color:var(--muted);letter-spacing:.8px;display:block;margin-bottom:6px;font-weight:700;text-transform:uppercase}
+.btn{padding:13px;border:none;border-radius:12px;font-weight:700;cursor:pointer;font-size:14px}
+.btn:active{opacity:.85}
+.btn-play{background:var(--accent-strong);color:var(--accent-text);flex:1}
+.btn-stop{background:var(--soft);color:var(--text);flex:1}
+.btn-sec{background:var(--soft);color:var(--text);border:1px solid var(--border);padding:9px 12px;border-radius:10px;font-size:12px;cursor:pointer;flex:1;text-align:center;font-weight:600}
+.controls{display:flex;gap:8px;margin-top:10px}
+.progress{height:7px;background:var(--progress-bg);border-radius:4px;margin-top:10px;overflow:hidden}
+.progress div{height:100%;background:var(--accent-strong);width:0%;transition:width .25s linear}
+.lang-list{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}
+.lang-badge{font-size:12px;padding:7px 14px;border-radius:20px;background:var(--soft);border:1px solid var(--border);cursor:pointer;color:var(--muted);font-weight:600}
+.lang-badge.active{background:var(--accent-strong);color:var(--accent-text);border-color:var(--accent-strong)}
+.pdf-viewer{max-height:120px;overflow:auto;background:var(--soft);border-radius:12px;border:1px solid var(--border);margin-top:8px;padding:6px;display:none}
+.pdf-viewer.show{display:block}
+.pdf-page{padding:8px;border-bottom:1px solid var(--border);cursor:pointer;font-size:12px;color:var(--muted)}
+.pdf-page.active{background:rgba(184,245,116,.25);border-left:3px solid var(--accent-strong);color:var(--text)}
+.list-item{background:var(--soft);padding:10px 12px;border-radius:10px;margin-top:8px;display:flex;justify-content:space-between;align-items:center;border:1px solid var(--border);font-size:13px;gap:8px}
+#historyList{max-height:160px;overflow-y:auto;-webkit-overflow-scrolling:touch}
+#libList{max-height:200px;overflow-y:auto;-webkit-overflow-scrolling:touch}
+#bookmarks{max-height:150px;overflow-y:auto;-webkit-overflow-scrolling:touch}
+.sv-paragraph{margin:0 0 14px 0}
+.sv-paragraph:last-child{margin-bottom:0}
+.sv-heading{font-weight:800;font-size:1.08em;margin-top:6px;margin-bottom:10px}
+.sentence{display:inline;transition:background .2s}
+.sentence.active{background:var(--accent);color:var(--accent-text);border-radius:4px;padding:1px 4px;font-weight:600}
+#textDisplay{width:100%;height:260px;background:var(--soft);border:1px solid var(--border);border-radius:14px;padding:14px;color:var(--text);font-size:15px;overflow-y:auto;line-height:1.7;margin-top:10px;outline:none;-webkit-overflow-scrolling:touch}
+#textDisplay:focus{border-color:var(--accent-strong)}
+input[type=range]{accent-color:var(--accent-strong);width:100%}
+input[type=text],select{background:var(--soft);border:1px solid var(--border);border-radius:10px;padding:9px 12px;color:var(--text);font-size:13px;width:100%}
+.drop-zone{border:2px dashed var(--border);border-radius:14px;padding:18px;text-align:center;color:var(--muted);font-size:13px;margin-top:8px;transition:.2s}
+.drop-zone.dragover{border-color:var(--accent-strong);background:rgba(184,245,116,.12)}
+.loading{display:none;text-align:center;padding:12px;color:var(--muted);font-size:13px}
+.loading.show{display:block}
+.toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:#222;color:#fff;padding:12px 20px;border-radius:12px;font-size:13px;z-index:9999;opacity:0;transition:opacity .3s;pointer-events:none;max-width:90%}
+.toast.show{opacity:1}
+.header-btns{display:flex;gap:4px;flex-wrap:nowrap;flex-shrink:0;justify-content:flex-end;min-width:248px}
+.voice-row{display:flex;gap:6px;margin-top:6px;flex-wrap:wrap}
+.voice-btn{font-size:12px;padding:8px 14px;border-radius:20px;background:var(--soft);border:1px solid var(--border);cursor:pointer;color:var(--muted);font-weight:600}
+.voice-btn.active{background:var(--accent-strong);color:var(--accent-text);border-color:var(--accent-strong)}
+
+/* Welcome overlay */
+.welcome-overlay{position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:10000;display:flex;align-items:center;justify-content:center;padding:20px}
+.welcome-box{background:var(--card);border-radius:20px;padding:24px;max-width:420px;width:100%;max-height:90vh;overflow-y:auto;box-shadow:0 20px 50px rgba(0,0,0,.3)}
+.welcome-box h2{font-size:20px;margin-bottom:12px;color:var(--text)}
+.welcome-box p,.welcome-box li{font-size:13px;line-height:1.55;color:var(--muted);margin-bottom:8px}
+.welcome-box ul{padding-left:18px;margin-bottom:12px}
+.welcome-box strong{color:var(--text)}
+.welcome-box .note{background:rgba(184,245,116,.15);border-left:3px solid var(--accent-strong);padding:10px 12px;border-radius:8px;margin:14px 0;font-size:12px}
+.welcome-lang{display:flex;justify-content:flex-end;gap:6px;margin-bottom:12px}
+.welcome-lang button{flex:0;padding:6px 12px;font-size:12px;font-weight:800}
+
+/* Immersion mode – keep navigation & page list always visible */
+body.immersion #dropZone,
+body.immersion #openBtn,
+body.immersion #searchBtn,
+body.immersion #searchInput,
+body.immersion #bookmarkBtn,
+body.immersion #lChooseLang,
+body.immersion #langList,
+body.immersion #lVoice,
+body.immersion #voiceSelect,
+body.immersion #lTone,
+body.immersion #presetNormal,
+body.immersion #presetRapide,
+body.immersion #presetCinema,
+body.immersion #rate,
+body.immersion #pitch,
+body.immersion #vol,
+body.immersion #lSpeed,
+body.immersion #lTon,
+body.immersion #lVolume,
+body.immersion #rv,
+body.immersion #pv,
+body.immersion #vv,
+body.immersion #toolsCard,
+body.immersion #saveBtn,
+body.immersion #fontPlus,
+body.immersion #fontMinus,
+body.immersion .header-btns button:not(#themeBtn):not(#immerseBtn):not(#layoutBtn) {
+  display: none !important;
+}
+body.immersion #textDisplay{height:58vh;font-size:18px}
+body.immersion .app{padding-top:8px}
+/* Force page list + navigation to stay visible even in immersion */
+body.immersion #pdfViewer,
+body.immersion #pagesBtn,
+body.immersion #prevBtn,
+body.immersion #nextBtn,
+body.immersion #pageInfo,
+body.immersion #pctInfo,
+body.immersion #wordCount,
+body.immersion .progress,
+body.immersion #pageDock {
+  display: block !important;
+}
+body.playing #pageDock,
+body.playing #pageDock.show {
+  display: flex !important;
+}
+body.immersion .controls {
+  display: flex !important;
+}
+
+.storage-bar{height:6px;background:var(--progress-bg);border-radius:3px;margin-top:6px;overflow:hidden}
+.storage-bar div{height:100%;background:var(--accent-strong);width:0%;transition:width .3s}
+.page-dock{
+  position:fixed;
+  left:50%;
+  transform:translateX(-50%);
+  bottom:12px;
+  width:calc(100% - 16px);
+  max-width:520px;
+  z-index:500;
+  display:none;
+  align-items:center;
+  gap:8px;
+  padding:8px 10px;
+  background:var(--card);
+  border:1px solid var(--border);
+  border-radius:16px;
+  box-shadow:0 10px 28px rgba(0,0,0,.18);
+}
+.page-dock.show{display:flex}
+.app.desktop ~ .page-dock, .app.desktop + .page-dock{max-width:1100px}
+.page-dock .btn-sec{flex:0 0 auto;min-width:42px}
+.page-dock-label{flex:0 0 auto;font-size:12px;font-weight:800;color:var(--text);white-space:nowrap}
+.page-nums{flex:1;display:flex;gap:6px;overflow-x:auto;-webkit-overflow-scrolling:touch;padding:2px 0}
+.page-num{
+  flex:0 0 auto;
+  min-width:36px;
+  height:34px;
+  border-radius:10px;
+  border:1px solid var(--border);
+  background:var(--soft);
+  color:var(--text);
+  font-weight:800;
+  font-size:12px;
+  cursor:pointer;
+}
+.page-num.active{
+  background:var(--accent-strong);
+  color:var(--accent-text);
+  border-color:var(--accent-strong);
+}
+
+@media(max-width:600px){.app.desktop{grid-template-columns:1fr}}
 </style>
 </head>
 <body>
 <div class="app" id="app">
-<header>
-<div class="logo"><h1>SIR<span>VOX</span></h1></div>
-<div style="display:flex;gap:5px"><button class="btn-sec" id="layoutBtn" style="flex:0;padding:6px 10px;">MODE BUREAU</button><button class="btn-sec" id="frBtn" style="background:#39ff14;color:#121212;font-weight:bold;flex:0;padding:6px 12px;">FR</button><button class="btn-sec" id="enBtn" style="flex:0;padding:6px 12px;">EN</button></div>
-</header>
+  <header>
+    <div class="logo"><h1>SIR<span>VOX</span> <small style="font-size:11px;font-weight:500;opacity:.7">V8.4</small></h1></div>
+    <div class="header-btns">
+      <button class="btn-sec" id="infoBtn" style="flex:0;padding:5px 7px;font-size:13px" title="Infos">ℹ️</button>
+      <button class="btn-sec" id="immerseBtn" style="flex:0;padding:5px 7px;font-size:13px" title="Mode immersion">⛶</button>
+      <button class="btn-sec" id="themeBtn" style="flex:0;padding:5px 7px;font-size:13px">🌙</button>
+      <button class="btn-sec" id="layoutBtn" style="flex:0;padding:5px 6px;font-size:10px">BUREAU</button>
+      <button class="btn-sec" id="frBtn" style="background:var(--accent-strong);color:var(--accent-text);font-weight:700;flex:0;padding:5px 8px;font-size:11px">FR</button>
+      <button class="btn-sec" id="enBtn" style="flex:0;padding:5px 8px;font-size:11px">EN</button>
+    </div>
+  </header>
 
-<div>
-<div class="card">
-<div style="display:flex;justify-content:space-between"><label id="lDoc">DOCUMENT - LECTEUR HORS LIGNE</label><span id="storageInfo" style="font-size:9px;color:#27ae60">0 Docs</span></div>
-<input type="file" id="fileInput" accept=".txt,.docx,.pdf" hidden>
-<div style="display:flex;gap:5px"><button class="btn-sec" id="openBtn">OUVRIR</button><button class="btn-sec" id="pagesBtn">PAGES X-Y</button><button class="btn-sec" id="searchBtn">RECHERCHER</button></div>
+  <div>
+    <div class="card">
+      <div style="display:flex;justify-content:space-between;align-items:center">
+        <label id="lDoc">DOCUMENT — LECTEUR HORS LIGNE</label>
+        <span id="storageInfo" style="font-size:10px;color:#27ae60">0 Docs</span>
+      </div>
 
-<div style="display:flex;justify-content:space-between;align-items:center;margin-top:8px;">
-<label id="lChooseLang" style="margin:0;">LANGUE DE LECTURE :</label>
-<div style="display:flex;gap:4px;"><button class="btn-sec" onclick="changeFontSize(1)" style="padding:2px 8px;font-size:10px;">TAILLE +</button><button class="btn-sec" onclick="changeFontSize(-1)" style="padding:2px 8px;font-size:10px;">TAILLE -</button></div>
-</div>
-<div class="lang-list" id="langList"></div>
+      <div style="margin-top:4px">
+        <div style="display:flex;justify-content:space-between;font-size:10px;color:var(--muted)">
+          <span id="storageLabel">Stockage</span>
+          <span id="storagePct">0%</span>
+        </div>
+        <div class="storage-bar"><div id="storageBar"></div></div>
+      </div>
 
-<div id="textDisplay" contenteditable="true" style="width:100%;height:240px;background:#fafafa;border:1px solid #dcdce0;border-radius:12px;padding:12px;color:#222;font-size:14px;overflow-y:auto;line-height:1.6;margin-top:8px;">Copier le texte ou importer un document.</div>
-<div id="pdfViewer" class="pdf-viewer"></div>
+      <input type="file" id="fileInput" accept=".txt,.docx,.doc,.pdf,text/plain,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/octet-stream" hidden>
+      
+      <div class="drop-zone" id="dropZone">
+        <div id="dropText">📄 Glissez un fichier ici (TXT, DOCX, PDF)<br><small>ou cliquez sur OUVRIR • Max 10 Mo</small></div>
+      </div>
 
-<div style="display:flex;gap:6px;margin-top:6px">
-<input type="text" id="searchInput" placeholder="Rechercher dans le texte..." style="flex:1;background:#fafafa;border:1px solid #dcdce0;border-radius:8px;padding:6px;color:#222;display:none;font-size:12px;">
-<button class="btn-sec" id="bookmarkBtn">AJOUTER MARQUE-PAGE</button>
+      <div style="display:flex;gap:6px;margin-top:10px">
+        <button class="btn-sec" id="openBtn">OUVRIR</button>
+        <button class="btn-sec" id="pagesBtn">PAGES X-Y</button>
+        <button class="btn-sec" id="searchBtn">RECHERCHER</button>
+      </div>
+
+      <div class="loading" id="loading">Chargement du document…</div>
+
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-top:12px">
+        <label id="lChooseLang" style="margin:0">LANGUE DE LECTURE</label>
+        <div style="display:flex;gap:4px">
+          <button class="btn-sec" id="fontPlus" style="padding:3px 9px;font-size:11px">A+</button>
+          <button class="btn-sec" id="fontMinus" style="padding:3px 9px;font-size:11px">A−</button>
+        </div>
+      </div>
+      <div class="lang-list" id="langList"></div>
+
+      <div style="margin-top:10px">
+        <label id="lVoice">VOIX SYSTÈME DISPONIBLES</label>
+        <select id="voiceSelect"></select>
+      </div>
+
+      <div id="textDisplay" contenteditable="true" spellcheck="false"></div>
+      <div id="pdfViewer" class="pdf-viewer"></div>
+
+      <div style="display:flex;gap:6px;margin-top:8px;align-items:center">
+        <input type="text" id="searchInput" placeholder="Rechercher…" style="display:none;flex:1">
+        <button class="btn-sec" id="bookmarkBtn" style="flex:0 0 auto">＋ MARQUE-PAGE</button>
+      </div>
+
+      <div class="progress"><div id="prog"></div></div>
+      <div style="display:flex;justify-content:space-between;margin-top:5px;font-size:11px;color:var(--muted)">
+        <span id="pageInfo">Page 1/1</span>
+        <span id="pctInfo" style="color:#27ae60;font-weight:700">0%</span>
+        <span id="wordCount">0 mots</span>
+      </div>
+    </div>
+
+    <div class="card">
+      <label id="lTone">RÉGLAGES AUDIO & PRÉRÉGLAGES</label>
+      <div style="display:flex;gap:6px;margin-bottom:10px;flex-wrap:wrap">
+        <button class="btn-sec" id="presetNormal">NORMAL</button>
+        <button class="btn-sec" id="presetRapide">RAPIDE</button>
+        <button class="btn-sec" id="presetCinema">CINÉMA</button>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px">
+        <div>
+          <label><span id="lSpeed">Vitesse</span> <span id="rv">1.0</span></label>
+          <input type="range" id="rate" min="0.5" max="2" step="0.1" value="1">
+        </div>
+        <div>
+          <label><span id="lTon">Ton</span> <span id="pv">1.0</span></label>
+          <input type="range" id="pitch" min="0.5" max="1.5" step="0.1" value="1">
+        </div>
+        <div>
+          <label><span id="lVolume">Volume</span> <span id="vv">100%</span></label>
+          <input type="range" id="vol" min="0" max="1" step="0.05" value="1">
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div>
+    <div class="card">
+      <div class="controls">
+        <button class="btn btn-play" id="playPauseBtn">LIRE / PAUSE</button>
+        <button class="btn btn-stop" id="stopBtn">ARRÊTER</button>
+      </div>
+      <div class="controls">
+        <button class="btn-sec" id="prevBtn">◀ PAGE</button>
+        <button class="btn-sec" id="nextBtn">PAGE ▶</button>
+        <button class="btn-sec" id="saveBtn">SAUVEGARDER</button>
+      </div>
+    </div>
+    <div class="card" id="toolsCard">
+      <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px">
+        <button class="btn-sec" id="libBtn" style="flex:1"><span id="libBtnLabel"></span></button>
+        <button class="btn-sec" id="bookBtn" style="flex:1"><span id="bookBtnLabel"></span></button>
+        <button class="btn-sec" id="histBtn" style="flex:1"><span id="histBtnLabel"></span></button>
+      </div>
+      <button class="btn-sec" id="aiBtn" style="width:100%;background:rgba(122,92,255,.15);border-color:#7a5cff;color:#7a5cff;font-weight:700"><span id="aiBtnLabel"></span></button>
+    </div>
+  </div>
 </div>
 
-<div class="progress"><div id="prog"></div></div>
-<div style="display:flex;justify-content:space-between;margin-top:4px"><span id="pageInfo" style="font-size:10px;color:#666">Page 1/1</span><span id="pctInfo" style="font-size:10px;color:#27ae60;font-weight:bold">0%</span><span id="wordCount" style="font-size:10px;color:#666">0 mots</span></div>
+<!-- Library popup -->
+<div class="welcome-overlay" id="libOverlay" style="display:none">
+  <div class="welcome-box">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+      <h2 id="lLib" style="margin-bottom:0">BIBLIOTHÈQUE</h2>
+      <button type="button" class="btn-sec" id="libCloseBtn" style="flex:0;padding:6px 10px">✕</button>
+    </div>
+    <div id="libList"></div>
+  </div>
 </div>
 
-<div class="card">
-<label id="lTone">RÉGLAGES AUDIO ET PRÉRÉGLAGES</label>
-<div style="display:flex;gap:5px;margin-bottom:8px;">
-<button class="btn-sec" onclick="setPreset('normal')">PRÉRÉGLAGE NORMAL</button>
-<button class="btn-sec" onclick="setPreset('rapide')">PRÉRÉGLAGE RAPIDE</button>
-<button class="btn-sec" onclick="setPreset('cinema')">PRÉRÉGLAGE CINÉMA</button>
+<!-- Bookmarks popup -->
+<div class="welcome-overlay" id="bookOverlay" style="display:none">
+  <div class="welcome-box">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+      <h2 id="lBook" style="margin-bottom:0">MARQUES-PAGES</h2>
+      <button type="button" class="btn-sec" id="bookCloseBtn" style="flex:0;padding:6px 10px">✕</button>
+    </div>
+    <div id="bookmarks"></div>
+  </div>
 </div>
 
-<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px">
-<div><label><span id="lSpeed">Vitesse</span> <span id="rv">1.0</span></label><input type="range" id="rate" min="0.5" max="2" step="0.1" value="1" style="width:100%"></div>
-<div><label><span id="lTon">Ton</span> <span id="pv">1.0</span></label><input type="range" id="pitch" min="0.5" max="1.5" step="0.1" value="1" style="width:100%"></div>
-<div><label><span id="lVolume">Volume</span> <span id="vv">100%</span></label><input type="range" id="vol" min="0" max="1" step="0.1" value="1" style="width:100%"></div>
-</div>
-</div>
+<!-- History popup -->
+<div class="welcome-overlay" id="histOverlay" style="display:none">
+  <div class="welcome-box">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;gap:8px">
+      <h2 id="lHist" style="margin-bottom:0">HISTORIQUE</h2>
+      <div style="display:flex;gap:6px;flex:0 0 auto">
+        <button type="button" class="btn-sec" id="clearHistBtn" style="flex:0;padding:6px 10px;background:rgba(217,83,79,.15);border-color:#d9534f;color:#d9534f"></button>
+        <button type="button" class="btn-sec" id="histCloseBtn" style="flex:0;padding:6px 10px">✕</button>
+      </div>
+    </div>
+    <div id="historyList"></div>
+  </div>
 </div>
 
-<div>
-<div class="card">
-<div class="controls"><button class="btn btn-play" id="playPauseBtn">LIRE / PAUSE</button><button class="btn btn-stop" id="stopBtn">ARRÊTER</button></div>
-<div class="controls"><button class="btn-sec" id="prevBtn">PAGE PRÉCÉDENTE</button><button class="btn-sec" id="nextBtn">PAGE SUIVANTE</button><button class="btn-sec" id="saveBtn">SAUVEGARDER</button></div>
+<!-- AI popup -->
+<div class="welcome-overlay" id="aiOverlay" style="display:none">
+  <div class="welcome-box">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+      <h2 id="aiTitle" style="margin-bottom:0">OUTILS IA</h2>
+      <button type="button" class="btn-sec" id="aiCloseBtn" style="flex:0;padding:6px 10px">✕</button>
+    </div>
+    <p id="aiInstructions" style="font-size:13px;color:var(--text);margin-bottom:14px;line-height:1.6"></p>
+    <button class="btn btn-play" id="aiImageBtn" style="width:100%"></button>
+    <p id="aiNote" style="font-size:12px;color:var(--muted);margin-top:12px;line-height:1.5"></p>
+    <div id="aiStatus" style="font-size:13px;margin-top:8px;font-weight:700"></div>
+  </div>
 </div>
-<div class="card"><label id="lLib">BIBLIOTHÈQUE DE COURS / LIVRES</label><div id="libList"></div></div>
-<div class="card"><label id="lBook">MARQUES-PAGES</label><div id="bookmarks"></div></div>
-<div class="card"><label id="lHist">HISTORIQUE DE LECTURE</label><div id="historyList"></div></div>
+
+<input type="file" id="aiImageInput" accept="image/*" hidden>
+
+<!-- Welcome Overlay -->
+<div class="welcome-overlay" id="welcomeOverlay" style="display:none">
+  <div class="welcome-box">
+    <div class="welcome-lang">
+      <button type="button" class="btn-sec" id="welcomeFrBtn">FR</button>
+      <button type="button" class="btn-sec" id="welcomeEnBtn">EN</button>
+    </div>
+    <h2 id="wTitle"></h2>
+    <p id="wSub"></p>
+    <p><strong id="wHowTitle"></strong></p>
+    <ol id="wHowList" style="padding-left:18px;margin-bottom:12px"></ol>
+    <p><strong id="wFeatTitle"></strong></p>
+    <ul id="wFeatList"></ul>
+    <div class="note">
+      <strong id="wNoteTitle"></strong><br>
+      <span id="wNoteBody"></span>
+    </div>
+    <p id="wSize" style="font-size:12px;margin-top:8px"></p>
+    <button class="btn btn-play" id="welcomeClose" style="width:100%;margin-top:16px"></button>
+  </div>
 </div>
+
+<div class="toast" id="toast"></div>
+
+<div id="pageDock" class="page-dock" aria-label="Pages">
+  <button type="button" class="btn-sec" id="pageBarPrev">◀</button>
+  <span id="pageBarLabel" class="page-dock-label">Page 1 / 1</span>
+  <div id="pageNums" class="page-nums"></div>
+  <button type="button" class="btn-sec" id="pageBarNext">▶</button>
 </div>
 
 <script>
-let synth=window.speechSynthesis,selectedLang='fr-FR',allText='',pages=[''],currentPage=0,uiLang='fr',isPlaying=false,isPaused=false,currentUtterance=null,charCursor=0,currentFontSize=14;
-let db=JSON.parse(localStorage.getItem('sirvox_v79')||'{"docs":[],"bookmarks":[],"history":[]}');
-const langs=[{code:'fr-FR',name:'Français'},{code:'en-US',name:'English'}];
+(function(){
+  'use strict';
 
-const i18n={
-fr:{
- doc:"DOCUMENT - LECTEUR HORS LIGNE", open:"OUVRIR", pages:"PAGES X-Y", search:"RECHERCHER", 
- chooseLang:"LANGUE DE LECTURE :", defaultText:"Copier le texte ou importer un document.",
- tone:"RÉGLAGES AUDIO ET PRÉRÉGLAGES", speed:"Vitesse", pitch:"Ton", vol:"Volume", 
- play:"LIRE / PAUSE", pauseTxt:"PAUSE", resumeTxt:"REPRENDRE", stop:"ARRÊTER", 
- page:"Page", words:"mots", empty:"Aucun", save:"SAUVEGARDER",
- prevPage:"PAGE PRÉCÉDENTE", nextPage:"PAGE SUIVANTE",
- libTitle:"BIBLIOTHÈQUE DE COURS / LIVRES", bookTitle:"MARQUES-PAGES", histTitle:"HISTORIQUE DE LECTURE",
- layout:"MODE BUREAU", bookmark:"AJOUTER MARQUE-PAGE", delete:"SUPPRIMER"
-},
-en:{
- doc:"DOCUMENT - OFFLINE READER", open:"OPEN", pages:"PAGES X-Y", search:"SEARCH", 
- chooseLang:"READING LANGUAGE:", defaultText:"Copy text or import a document.",
- tone:"AUDIO SETTINGS & PRESETS", speed:"Speed", pitch:"Tone", vol:"Volume", 
- play:"PLAY / PAUSE", pauseTxt:"PAUSE", resumeTxt:"RESUME", stop:"STOP", 
- page:"Page", words:"words", empty:"None", save:"SAVE",
- prevPage:"PREVIOUS PAGE", nextPage:"NEXT PAGE",
- libTitle:"LIBRARY OF COURSES / BOOKS", bookTitle:"BOOKMARKS", histTitle:"READING HISTORY",
- layout:"DESKTOP MODE", bookmark:"ADD BOOKMARK", delete:"DELETE"
-}
-};
+  const MAX_FILE_SIZE = 10 * 1024 * 1024;      // 10 Mo
+  const MAX_STORAGE   = 25 * 1024 * 1024;      // 25 Mo
+  const CHUNK_SIZE    = 1800;
+  const STORAGE_KEY   = 'sirvox_v82';
 
-function renderLangList(){
- document.getElementById('langList').innerHTML=langs.map(l=>`<span class="lang-badge ${l.code===selectedLang?'active':''}" onclick="setLanguage('${l.code}')">${l.name}</span>`).join('');
-}
+  let synth = window.speechSynthesis;
+  let selectedLang = 'fr-FR';
+  let selectedVoice = null;
+  let allText = '';
+  let pages = [''];
+  let currentPage = 0;
+  let uiLang = 'fr';
+  let isPlaying = false;
+  let isPaused = false;
+  let currentUtterance = null;
+  let currentFontSize = 15;
+  let sentences = [];
+  let sentenceIndex = 0;
+  let currentDocId = null;          // for position memory
 
-window.setLanguage=(code)=>{
- selectedLang=code;
- renderLangList();
-};
+  let db = JSON.parse(localStorage.getItem(STORAGE_KEY) || '{"docs":[],"bookmarks":[],"history":[],"positions":{},"welcomeSeen":false,"voicePrefs":{}}');
+  if (!db.voicePrefs) db.voicePrefs = {}; // safety for users upgrading from an older saved db
 
-function setUILang(l){
- uiLang=l;let t=i18n[l];
- document.getElementById('lDoc').innerText=t.doc;
- document.getElementById('openBtn').innerText=t.open;
- document.getElementById('pagesBtn').innerText=t.pages;
- document.getElementById('searchBtn').innerText=t.search;
- document.getElementById('lChooseLang').innerText=t.chooseLang;
- document.getElementById('lTone').innerText=t.tone;
- document.getElementById('lSpeed').innerText=t.speed;
- document.getElementById('lTon').innerText=t.pitch;
- document.getElementById('lVolume').innerText=t.vol;
- if(!isPlaying && !isPaused) document.getElementById('playPauseBtn').innerText=t.play;
- document.getElementById('stopBtn').innerText=t.stop;
- document.getElementById('saveBtn').innerText=t.save;
- document.getElementById('prevBtn').innerText=t.prevPage;
- document.getElementById('nextBtn').innerText=t.nextPage;
- document.getElementById('lLib').innerText=t.libTitle;
- document.getElementById('lBook').innerText=t.bookTitle;
- document.getElementById('lHist').innerText=t.histTitle;
- document.getElementById('layoutBtn').innerText=t.layout;
- document.getElementById('bookmarkBtn').innerText=t.bookmark;
- 
- if(textDisplay.innerText.trim()==="" || textDisplay.innerText===i18n.fr.defaultText || textDisplay.innerText===i18n.en.defaultText){
-  textDisplay.innerText=t.defaultText;
- }
- upd();
- renderLib(); renderBm(); renderHist();
-}
+  const langs = [
+    {code:'fr-FR', name:'Français'},
+    {code:'en-US', name:'English'}
+  ];
 
-document.getElementById('frBtn').onclick=()=>{setUILang('fr');document.getElementById('frBtn').style.background='#39ff14';document.getElementById('frBtn').style.color='#121212';document.getElementById('enBtn').style.background='#f0f0f2';document.getElementById('enBtn').style.color='#333';};
-document.getElementById('enBtn').onclick=()=>{setUILang('en');document.getElementById('enBtn').style.background='#39ff14';document.getElementById('enBtn').style.color='#121212';document.getElementById('frBtn').style.background='#f0f0f2';document.getElementById('frBtn').style.color='#333';};
-document.getElementById('layoutBtn').onclick=()=>{let isDesk=document.getElementById('app').classList.toggle('desktop');document.getElementById('layoutBtn').innerText=isDesk?(uiLang==='fr'?'MODE MOBILE':'MOBILE MODE'):(uiLang==='fr'?'MODE BUREAU':'DESKTOP MODE');};
+  const i18n = {
+    fr: {
+      doc:"DOCUMENT — LECTEUR HORS LIGNE", open:"OUVRIR", pages:"PAGES X-Y", search:"RECHERCHER",
+      chooseLang:"LANGUE DE LECTURE", voice:"VOIX SYSTÈME DISPONIBLES",
+      defaultText:"Copiez du texte ici ou importez un document (max 10 Mo).\n\nVous pouvez éditer le texte librement avant de lancer la lecture.",
+      tone:"RÉGLAGES AUDIO & PRÉRÉGLAGES", speed:"Vitesse", pitch:"Ton", vol:"Volume",
+      play:"LIRE / PAUSE", pauseTxt:"PAUSE", resumeTxt:"REPRENDRE", stop:"ARRÊTER",
+      page:"Page", words:"mots", empty:"Aucun", save:"SAUVEGARDER",
+      prevPage:"◀ PAGE", nextPage:"PAGE ▶",
+      libTitle:"BIBLIOTHÈQUE", bookTitle:"MARQUES-PAGES", histTitle:"HISTORIQUE",
+      layout:"BUREAU", layoutMobile:"MOBILE",
+      bookmark:"＋ MARQUE-PAGE", delete:"SUPPRIMER", rename:"Renommer",
+      drop:"📄 Glissez un fichier ici (TXT, DOCX, PDF)<br><small>ou cliquez sur OUVRIR • Max 10 Mo</small>",
+      loading:"Extraction du texte…", tooBig:"Fichier trop volumineux (max 10 Mo).",
+      errorRead:"Impossible de lire ce document.", saved:"Document sauvegardé", noText:"Aucun texte à lire.",
+      male:"Homme", female:"Femme", storage:"Stockage", storageFull:"Stockage plein (25 Mo). Supprimez des documents.",
+      immerseOn:"Quitter immersion", immerseOff:"Mode immersion", infoBtn:"Infos",
+      autoVoice:"Automatique (voix système)", clearHistory:"EFFACER L'HISTORIQUE",
+      aiBtn:"OUTILS IA — IMAGE VERS TEXTE", aiTitle:"OUTILS IA",
+      aiInstructions:"Importez une capture d'écran, une photo ou une image contenant du texte. L'IA extrait automatiquement le texte pour vous, que vous pourrez ensuite modifier, renommer et enregistrer.",
+      aiImageText:"Importer une image",
+      aiNote:"La photo n'est jamais conservée : seul le texte extrait est gardé. Une connexion internet est nécessaire la première fois (téléchargement du modèle).",
+      aiAnalyzing:"Analyse en cours…", aiError:"Impossible d'analyser cette image. Réessayez.",
+      aiDone:"✓ Texte extrait", aiNeedsInternet:"Activez votre connexion internet pour utiliser cette fonction (1ère fois)."
+    },
+    en: {
+      doc:"DOCUMENT — OFFLINE READER", open:"OPEN", pages:"PAGES X-Y", search:"SEARCH",
+      chooseLang:"READING LANGUAGE", voice:"AVAILABLE SYSTEM VOICES",
+      defaultText:"Copy text here or import a document (max 10 MB).\n\nYou can freely edit the text before starting reading.",
+      tone:"AUDIO SETTINGS & PRESETS", speed:"Speed", pitch:"Tone", vol:"Volume",
+      play:"PLAY / PAUSE", pauseTxt:"PAUSE", resumeTxt:"RESUME", stop:"STOP",
+      page:"Page", words:"words", empty:"None", save:"SAVE",
+      prevPage:"◀ PAGE", nextPage:"PAGE ▶",
+      libTitle:"LIBRARY", bookTitle:"BOOKMARKS", histTitle:"HISTORY",
+      layout:"DESKTOP", layoutMobile:"MOBILE",
+      bookmark:"＋ BOOKMARK", delete:"DELETE", rename:"Rename",
+      drop:"📄 Drop a file here (TXT, DOCX, PDF)<br><small>or click OPEN • Max 10 MB</small>",
+      loading:"Extracting text…", tooBig:"File too large (max 10 MB).",
+      errorRead:"Unable to read this document.", saved:"Document saved", noText:"No text to read.",
+      male:"Male", female:"Female", storage:"Storage", storageFull:"Storage full (25 MB). Delete some documents.",
+      immerseOn:"Exit immersion", immerseOff:"Immersion mode", infoBtn:"Info",
+      autoVoice:"Automatic (system voice)", clearHistory:"CLEAR HISTORY",
+      aiBtn:"AI TOOLS — IMAGE TO TEXT", aiTitle:"AI TOOLS",
+      aiInstructions:"Upload a screenshot, photo, or image containing text. The AI automatically extracts the text for you, which you can then edit, rename and save.",
+      aiImageText:"Upload image",
+      aiNote:"The photo is never kept — only the extracted text is saved. An internet connection is required the first time (downloads the recognition model).",
+      aiAnalyzing:"Analyzing…", aiError:"Unable to analyze this image. Please try again.",
+      aiDone:"✓ Text extracted", aiNeedsInternet:"Please turn on your internet connection to use this feature (first time only)."
+    }
+  };
 
-let textDisplay=document.getElementById('textDisplay'),prog=document.getElementById('prog'),pageInfo=document.getElementById('pageInfo'),pdfViewer=document.getElementById('pdfViewer');
-
-textDisplay.oninput=()=>{
- allText=textDisplay.innerText;
- if(allText.trim() && allText!==i18n.fr.defaultText && allText!==i18n.en.defaultText){
-  splitPages(allText);
- }
- upd();
-};
-
-function changeFontSize(delta){
- currentFontSize=Math.max(10, Math.min(28, currentFontSize+delta));
- textDisplay.style.fontSize=currentFontSize+'px';
-}
-
-function setPreset(type){
- if(type==='normal'){document.getElementById('rate').value=1;document.getElementById('pitch').value=1;document.getElementById('vol').value=1;}
- if(type==='rapide'){document.getElementById('rate').value=1.5;document.getElementById('pitch').value=1.1;document.getElementById('vol').value=1;}
- if(type==='cinema'){document.getElementById('rate').value=0.9;document.getElementById('pitch').value=0.8;document.getElementById('vol').value=1;}
- document.getElementById('rv').innerText=document.getElementById('rate').value;
- document.getElementById('pv').innerText=document.getElementById('pitch').value;
- document.getElementById('vv').innerText=Math.round(document.getElementById('vol').value*100)+'%';
-}
-
-function upd(){
- let rawText=textDisplay.innerText||"";
- let w=rawText.trim().split(/\s+/).filter(Boolean).length;
- document.getElementById('wordCount').innerText=w+' '+i18n[uiLang].words;
- document.getElementById('storageInfo').innerText=db.docs.length+' Docs';
-}
-
-function splitPages(txt){
- let cleaned = txt.replace(/\r\n/g, '\n');
- let chunks = [];
- let paragraphs = cleaned.split('\n\n');
- let currentChunk = "";
- 
- for(let p of paragraphs){
-  if((currentChunk + "\n\n" + p).length > 1600){
-   if(currentChunk) chunks.push(currentChunk.trim());
-   currentChunk = p;
-  } else {
-   currentChunk += (currentChunk ? "\n\n" : "") + p;
+  function toast(msg) {
+    const el = document.getElementById('toast');
+    el.textContent = msg;
+    el.classList.add('show');
+    setTimeout(() => el.classList.remove('show'), 2600);
   }
- }
- if(currentChunk) chunks.push(currentChunk.trim());
- 
- pages = chunks.length > 0 ? chunks : [txt];
- currentPage = 0;
- showCurrentPage();
- renderPdfViewer();
- addHistory(txt.slice(0,40));
-}
+  function t(key){ return i18n[uiLang][key] || key; }
 
-function showCurrentPage(){
- let text=pages[currentPage]||"";
- textDisplay.innerHTML=text.split('\n').map(p=>`<p style="margin-bottom:8px;">${p}</p>`).join('');
- textDisplay.style.fontSize=currentFontSize+'px';
- pageInfo.innerText=`${i18n[uiLang].page} ${currentPage+1}/${pages.length}`;
- let pct=Math.round(((currentPage+1)/pages.length)*100);
- document.getElementById('pctInfo').innerText=pct+'%';
- upd();
-}
-
-function renderPdfViewer(){
- if(pages.length<=1){pdfViewer.style.display='none';return;}
- pdfViewer.style.display='block';
- pdfViewer.innerHTML=pages.map((p,i)=>`<div class="pdf-page ${i===currentPage?'active':''}" onclick="goPage(${i})"><b>${i18n[uiLang].page} ${i+1}</b> - ${p.slice(0,50).replace(/</g,'&lt;')}...</div>`).join('');
-}
-
-window.goPage=(i)=>{
- synth.cancel();
- isPlaying=false; isPaused=false; charCursor=0;
- document.getElementById('playPauseBtn').innerText=i18n[uiLang].play;
- currentPage=i;
- showCurrentPage();
- renderPdfViewer();
-};
-
-function highlightWord(charIndex, text) {
- if (charIndex < 0) return;
- let words = text.split(" ");
- let charCount = 0;
- let targetWordIndex = 0;
- 
- for (let i = 0; i < words.length; i++) {
-  charCount += words[i].length + 1;
-  if (charCount >= charIndex) {
-   targetWordIndex = i;
-   break;
+  // ——— Storage helpers ———
+  function getStorageSize() {
+    try {
+      return new Blob([localStorage.getItem(STORAGE_KEY) || '']).size;
+    } catch(e) { return 0; }
   }
- }
- textDisplay.innerHTML = words.map((w, idx) => idx === targetWordIndex ? `<span class="highlight-word">${w}</span>` : w).join(" ");
- textDisplay.style.fontSize=currentFontSize+'px';
-}
-
-function playPause(){
- let btn = document.getElementById('playPauseBtn');
- 
- if(isPlaying){
-  synth.cancel();
-  isPaused=true;
-  isPlaying=false;
-  btn.innerText=i18n[uiLang].resumeTxt;
-  return;
- }
- 
- if(isPaused){
-  isPaused=false;
-  isPlaying=true;
-  btn.innerText=i18n[uiLang].pauseTxt;
-  startSpeech(pages[currentPage]||"");
-  return;
- }
- 
- synth.cancel();
- charCursor=0;
- let t=pages[currentPage]||textDisplay.innerText||"";
- if(!t || t===i18n.fr.defaultText || t===i18n.en.defaultText) return;
- 
- isPlaying=true;
- isPaused=false;
- btn.innerText=i18n[uiLang].pauseTxt;
- startSpeech(t);
-}
-
-function startSpeech(fullText){
- let textToRead = fullText.slice(charCursor);
- if(!textToRead.trim()){
-  isPlaying=false; isPaused=false;
-  document.getElementById('playPauseBtn').innerText=i18n[uiLang].play;
-  return;
- }
-
- currentUtterance=new SpeechSynthesisUtterance(textToRead);
- currentUtterance.lang=selectedLang;
- currentUtterance.rate=parseFloat(document.getElementById('rate').value);
- currentUtterance.pitch=parseFloat(document.getElementById('pitch').value);
- currentUtterance.volume=parseFloat(document.getElementById('vol').value);
- 
- currentUtterance.onboundary=e=>{
-  if(e.name==='word'){
-   try{
-    let absoluteCharIndex=charCursor+e.charIndex;
-    highlightWord(absoluteCharIndex, fullText);
-    prog.style.width=(absoluteCharIndex/fullText.length*100)+'%';
-    let pct=Math.round((absoluteCharIndex/fullText.length)*100);
-    document.getElementById('pctInfo').innerText=pct+'%';
-   }catch(err){}
+  function updateStorageUI() {
+    const used = getStorageSize();
+    const pct = Math.min(100, Math.round((used / MAX_STORAGE) * 100));
+    document.getElementById('storageBar').style.width = pct + '%';
+    document.getElementById('storagePct').textContent = pct + '%';
+    document.getElementById('storageInfo').textContent = db.docs.length + ' Docs';
+    document.getElementById('storageLabel').textContent = t('storage') + ' (' + (used/1024/1024).toFixed(1) + ' / 25 Mo)';
   }
- };
- 
- currentUtterance.onend=()=>{
-  if(!isPaused && isPlaying){
-   prog.style.width='100%';
-   document.getElementById('pctInfo').innerText='100%';
-   charCursor=0;
-   if(currentPage < pages.length - 1){
-    currentPage++;
+  function saveDB() {
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(db));
+      updateStorageUI();
+    } catch(e) {
+      toast(t('storageFull'));
+    }
+  }
+
+  // ——— Welcome ———
+  const welcomeCopy = {
+    fr: {
+      title: "Bienvenue sur SIRVOX",
+      sub: "Lecteur de documents hors ligne avec synthèse vocale.",
+      howTitle: "Comment l’utiliser :",
+      how: [
+        "Importez un fichier (TXT, DOCX ou PDF) ou collez directement votre texte.",
+        "Choisissez la langue (FR / EN) et, si besoin, une voix précise dans la liste.",
+        "Appuyez sur Lire pour démarrer la lecture.",
+        "Utilisez les boutons pour changer de page, mettre en pause ou ajouter un marque-page."
+      ],
+      featTitle: "Fonctionnalités principales :",
+      feat: [
+        "Lecture 100 % hors ligne",
+        "Surlignage de la phrase en cours",
+        "Bibliothèque pour sauvegarder vos documents",
+        "Mode immersion pour une lecture confortable",
+        "Réglages de vitesse, ton et volume",
+        "Outils IA : extraction de texte à partir d'une image"
+      ],
+      noteTitle: "Important :",
+      noteBody: "SIRVOX utilise par défaut la meilleure voix installée sur votre téléphone. Vous pouvez aussi choisir une voix précise dans la liste si votre appareil en propose plusieurs.",
+      size: "Taille max par fichier : 10 Mo",
+      close: "J’ai compris"
+    },
+    en: {
+      title: "Welcome to SIRVOX",
+      sub: "Offline document reader with text-to-speech.",
+      howTitle: "How to use it:",
+      how: [
+        "Import a file (TXT, DOCX or PDF) or paste your text directly.",
+        "Choose the language (FR / EN) and, if you want, a specific voice from the list.",
+        "Press Play to start reading.",
+        "Use the buttons to change page, pause, or add a bookmark."
+      ],
+      featTitle: "Main features:",
+      feat: [
+        "100% offline reading",
+        "Highlight of the current sentence",
+        "Library to save your documents",
+        "Immersion mode for comfortable reading",
+        "Speed, pitch and volume settings",
+        "AI tools: extract text from an image"
+      ],
+      noteTitle: "Important:",
+      noteBody: "By default SIRVOX uses the best voice installed on your phone. You can also pick a specific voice from the list if your device offers several.",
+      size: "Max file size: 10 MB",
+      close: "Got it"
+    }
+  };
+
+  let welcomeLang = 'fr';
+
+  function renderWelcome(lang) {
+    welcomeLang = lang;
+    const w = welcomeCopy[lang];
+    document.getElementById('wTitle').textContent = w.title;
+    document.getElementById('wSub').textContent = w.sub;
+    document.getElementById('wHowTitle').textContent = w.howTitle;
+    document.getElementById('wHowList').innerHTML = w.how.map(item => `<li style="font-size:13px;line-height:1.55;color:var(--muted);margin-bottom:6px">${item}</li>`).join('');
+    document.getElementById('wFeatTitle').textContent = w.featTitle;
+    document.getElementById('wFeatList').innerHTML = w.feat.map(item => `<li>${item}</li>`).join('');
+    document.getElementById('wNoteTitle').textContent = w.noteTitle;
+    document.getElementById('wNoteBody').textContent = w.noteBody;
+    document.getElementById('wSize').innerHTML = w.size.replace(/10 Mo|10 MB/, '<strong>$&</strong>');
+    document.getElementById('welcomeClose').textContent = w.close;
+
+    const frBtn = document.getElementById('welcomeFrBtn');
+    const enBtn = document.getElementById('welcomeEnBtn');
+    if (lang === 'fr') {
+      frBtn.style.background = 'var(--accent-strong)';
+      frBtn.style.color = 'var(--accent-text)';
+      enBtn.style.background = 'var(--soft)';
+      enBtn.style.color = 'var(--text)';
+    } else {
+      enBtn.style.background = 'var(--accent-strong)';
+      enBtn.style.color = 'var(--accent-text)';
+      frBtn.style.background = 'var(--soft)';
+      frBtn.style.color = 'var(--text)';
+    }
+  }
+
+  function showWelcomeIfNeeded() {
+    if (!db.welcomeSeenV83) {
+      renderWelcome(uiLang === 'en' ? 'en' : 'fr');
+      document.getElementById('welcomeOverlay').style.display = 'flex';
+    }
+  }
+  document.getElementById('infoBtn').onclick = () => {
+    renderWelcome(uiLang === 'en' ? 'en' : 'fr');
+    document.getElementById('welcomeOverlay').style.display = 'flex';
+  };
+  document.getElementById('welcomeFrBtn').onclick = () => renderWelcome('fr');
+  document.getElementById('welcomeEnBtn').onclick = () => renderWelcome('en');
+  document.getElementById('welcomeClose').onclick = () => {
+    db.welcomeSeenV83 = true;
+    saveDB();
+    document.getElementById('welcomeOverlay').style.display = 'none';
+    if (welcomeLang !== uiLang) setUILang(welcomeLang);
+  };
+
+  // ——— Library / Bookmarks / History popups ———
+  document.getElementById('libBtn').onclick = () => { document.getElementById('libOverlay').style.display = 'flex'; };
+  document.getElementById('libCloseBtn').onclick = () => { document.getElementById('libOverlay').style.display = 'none'; };
+  document.getElementById('bookBtn').onclick = () => { document.getElementById('bookOverlay').style.display = 'flex'; };
+  document.getElementById('bookCloseBtn').onclick = () => { document.getElementById('bookOverlay').style.display = 'none'; };
+  document.getElementById('histBtn').onclick = () => { document.getElementById('histOverlay').style.display = 'flex'; };
+  document.getElementById('histCloseBtn').onclick = () => { document.getElementById('histOverlay').style.display = 'none'; };
+  document.getElementById('clearHistBtn').onclick = () => {
+    db.history = [];
+    saveDB();
+    renderHist();
+  };
+
+  // ——— AI tools: image → text (Tesseract.js, loaded on demand) ———
+  let tesseractLoadPromise = null;
+  function loadTesseract() {
+    if (window.Tesseract) return Promise.resolve();
+    if (tesseractLoadPromise) return tesseractLoadPromise;
+    tesseractLoadPromise = new Promise((resolve, reject) => {
+      const s = document.createElement('script');
+      s.src = 'https://cdn.jsdelivr.net/npm/tesseract.js@4.1.1/dist/tesseract.min.js';
+      s.onload = resolve;
+      s.onerror = () => { tesseractLoadPromise = null; reject(new Error('Tesseract load failed')); };
+      document.head.appendChild(s);
+    });
+    return tesseractLoadPromise;
+  }
+
+  async function runOcrOnFile(file) {
+    if (!file) return;
+    const statusEl = document.getElementById('aiStatus');
+    statusEl.style.color = 'var(--muted)';
+
+    if (typeof navigator !== 'undefined' && navigator.onLine === false) {
+      toast(t('aiNeedsInternet'));
+      statusEl.textContent = t('aiNeedsInternet');
+      statusEl.style.color = '#d9534f';
+      return;
+    }
+
+    statusEl.textContent = t('aiAnalyzing') + ' 0%';
+    try {
+      await loadTesseract();
+      const { data } = await Tesseract.recognize(file, 'fra+eng', {
+        logger: m => {
+          if (typeof m.progress === 'number') {
+            statusEl.textContent = t('aiAnalyzing') + ' ' + Math.round(m.progress * 100) + '%';
+          }
+        }
+      });
+      const text = (data && data.text || '').trim();
+      if (!text) { toast(t('aiError')); statusEl.textContent = ''; return; }
+      allText = text;
+      currentDocId = 'ocr_' + Date.now();
+      splitPages(allText);
+      document.getElementById('aiOverlay').style.display = 'none';
+      statusEl.textContent = '';
+      toast(t('aiDone'));
+    } catch (err) {
+      console.error('OCR error:', err);
+      toast(t('aiError'));
+      statusEl.textContent = t('aiError');
+      statusEl.style.color = '#d9534f';
+    }
+  }
+
+  document.getElementById('aiBtn').onclick = () => {
+    document.getElementById('aiStatus').textContent = '';
+    document.getElementById('aiOverlay').style.display = 'flex';
+  };
+  document.getElementById('aiCloseBtn').onclick = () => { document.getElementById('aiOverlay').style.display = 'none'; };
+  document.getElementById('aiImageBtn').onclick = () => document.getElementById('aiImageInput').click();
+  document.getElementById('aiImageInput').onchange = e => {
+    const f = e.target.files[0];
+    e.target.value = ''; // never retain a reference to the selected photo
+    if (f) runOcrOnFile(f);
+  };
+
+  // ——— UI Lang ———
+  function setUILang(l) {
+    uiLang = l;
+    const tr = i18n[l];
+    document.getElementById('lDoc').textContent = tr.doc;
+    document.getElementById('openBtn').textContent = tr.open;
+    document.getElementById('pagesBtn').textContent = tr.pages;
+    document.getElementById('searchBtn').textContent = tr.search;
+    document.getElementById('lChooseLang').textContent = tr.chooseLang;
+    document.getElementById('lVoice').textContent = tr.voice;
+    document.getElementById('lTone').textContent = tr.tone;
+    document.getElementById('lSpeed').textContent = tr.speed;
+    document.getElementById('lTon').textContent = tr.pitch;
+    document.getElementById('lVolume').textContent = tr.vol;
+    if (!isPlaying && !isPaused) document.getElementById('playPauseBtn').textContent = tr.play;
+    document.getElementById('stopBtn').textContent = tr.stop;
+    document.getElementById('saveBtn').textContent = tr.save;
+    document.getElementById('prevBtn').textContent = tr.prevPage;
+    document.getElementById('nextBtn').textContent = tr.nextPage;
+    document.getElementById('lLib').textContent = tr.libTitle;
+    document.getElementById('lBook').textContent = tr.bookTitle;
+    document.getElementById('lHist').textContent = tr.histTitle;
+    document.getElementById('libBtnLabel').textContent = tr.libTitle;
+    document.getElementById('bookBtnLabel').textContent = tr.bookTitle;
+    document.getElementById('histBtnLabel').textContent = tr.histTitle;
+    document.getElementById('clearHistBtn').textContent = tr.clearHistory;
+    document.getElementById('aiBtnLabel').textContent = tr.aiBtn;
+    document.getElementById('aiTitle').textContent = tr.aiTitle;
+    document.getElementById('aiInstructions').textContent = tr.aiInstructions;
+    document.getElementById('aiImageBtn').textContent = tr.aiImageText;
+    document.getElementById('aiNote').textContent = tr.aiNote;
+    document.getElementById('layoutBtn').textContent = document.getElementById('app').classList.contains('desktop') ? tr.layoutMobile : tr.layout;
+    document.getElementById('bookmarkBtn').textContent = tr.bookmark;
+    document.getElementById('dropText').innerHTML = tr.drop;
+    document.getElementById('loading').textContent = tr.loading;
+    document.getElementById('immerseBtn').title = document.body.classList.contains('immersion') ? tr.immerseOn : tr.immerseOff;
+    document.getElementById('infoBtn').title = tr.infoBtn;
+
+    const td = document.getElementById('textDisplay');
+    if (!allText.trim()) td.innerText = tr.defaultText;
+    upd(); renderLib(); renderBm(); renderHist(); populateVoiceSelect(); updateStorageUI();
+  }
+
+  document.getElementById('frBtn').onclick = () => {
+    setUILang('fr');
+    document.getElementById('frBtn').style.background = 'var(--accent-strong)';
+    document.getElementById('frBtn').style.color = 'var(--accent-text)';
+    document.getElementById('enBtn').style.background = 'var(--soft)';
+    document.getElementById('enBtn').style.color = 'var(--text)';
+  };
+  document.getElementById('enBtn').onclick = () => {
+    setUILang('en');
+    document.getElementById('enBtn').style.background = 'var(--accent-strong)';
+    document.getElementById('enBtn').style.color = 'var(--accent-text)';
+    document.getElementById('frBtn').style.background = 'var(--soft)';
+    document.getElementById('frBtn').style.color = 'var(--text)';
+  };
+
+  document.getElementById('themeBtn').onclick = () => {
+    document.body.classList.toggle('dark');
+    document.getElementById('themeBtn').textContent = document.body.classList.contains('dark') ? '☀️' : '🌙';
+  };
+  document.getElementById('layoutBtn').onclick = () => {
+    const isDesk = document.getElementById('app').classList.toggle('desktop');
+    document.getElementById('layoutBtn').textContent = isDesk ? t('layoutMobile') : t('layout');
+  };
+
+  // Immersion mode
+  document.getElementById('immerseBtn').onclick = () => {
+    document.body.classList.toggle('immersion');
+    const on = document.body.classList.contains('immersion');
+    document.getElementById('immerseBtn').textContent = on ? '⛶' : '⛶';
+    document.getElementById('immerseBtn').title = on ? t('immerseOn') : t('immerseOff');
+  };
+
+  // ——— Language & Voice ———
+  function renderLangList() {
+    document.getElementById('langList').innerHTML = langs.map(l =>
+      `<span class="lang-badge ${l.code===selectedLang?'active':''}" data-code="${l.code}">${l.name}</span>`
+    ).join('');
+    document.querySelectorAll('.lang-badge').forEach(el => {
+      el.onclick = () => {
+        selectedLang = el.dataset.code;
+        renderLangList();
+        populateVoiceSelect();
+      };
+    });
+  }
+
+  function populateVoiceSelect() {
+    const sel = document.getElementById('voiceSelect');
+    if (!sel) return;
+    const langPrefix = selectedLang.split('-')[0];
+    const voices = synth.getVoices().filter(v => v.lang.toLowerCase().startsWith(langPrefix));
+    const stored = (db.voicePrefs || {})[langPrefix] || '';
+
+    let html = `<option value="">${t('autoVoice')}</option>`;
+    html += voices.map(v =>
+      `<option value="${escapeHtml(v.voiceURI)}">${escapeHtml(v.name)}${v.lang ? ' (' + v.lang + ')' : ''}</option>`
+    ).join('');
+    sel.innerHTML = html;
+
+    if (stored && voices.some(v => v.voiceURI === stored)) {
+      selectedVoice = voices.find(v => v.voiceURI === stored);
+      sel.value = stored;
+    } else {
+      selectedVoice = null;
+      sel.value = '';
+    }
+  }
+
+  document.getElementById('voiceSelect').onchange = e => {
+    const langPrefix = selectedLang.split('-')[0];
+    const val = e.target.value;
+    if (!db.voicePrefs) db.voicePrefs = {};
+    if (!val) {
+      delete db.voicePrefs[langPrefix];
+      selectedVoice = null;
+    } else {
+      const voices = synth.getVoices().filter(v => v.lang.toLowerCase().startsWith(langPrefix));
+      selectedVoice = voices.find(v => v.voiceURI === val) || null;
+      db.voicePrefs[langPrefix] = val;
+    }
+    saveDB();
+    toast(selectedVoice ? selectedVoice.name : t('autoVoice'));
+  };
+
+  if (typeof speechSynthesis !== 'undefined' && speechSynthesis.onvoiceschanged !== undefined) {
+    speechSynthesis.onvoiceschanged = () => { populateVoiceSelect(); };
+  }
+  setTimeout(() => { populateVoiceSelect(); }, 500);
+
+  // ——— Text helpers ———
+  const textDisplay = document.getElementById('textDisplay');
+  const prog = document.getElementById('prog');
+
+  function escapeHtml(str) {
+    return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  }
+
+  // Better sentence splitting – reduces long pauses on periods (especially English)
+  // Operates on a single paragraph's text (newlines inside already normalized).
+  function splitIntoSentences(text) {
+    // Normalize multiple dots / ellipsis and keep reasonable pauses
+    let cleaned = text
+      .replace(/\.{3,}/g, '…')           // ellipsis
+      .replace(/([.!?])\s+/g, '$1 ')     // single space after punctuation
+      .replace(/[ \t]+/g, ' ')
+      .trim();
+
+    // Split on sentence endings but avoid splitting on common abbreviations.
+    // IMPORTANT: any trailing text with no closing punctuation must still be
+    // kept — a plain .match() would silently discard it, which was causing
+    // whole words/phrases to disappear from imported documents.
+    const re = /[^.!?…]+[.!?…]+\s*/g;
+    const result = [];
+    let m, lastIndex = 0;
+    while ((m = re.exec(cleaned)) !== null) {
+      result.push(m[0]);
+      lastIndex = re.lastIndex;
+    }
+    const remainder = cleaned.slice(lastIndex).trim();
+    if (remainder) result.push(remainder);
+
+    return (result.length ? result : [cleaned]).map(s => s.replace(/\s+/g, ' ').trim()).filter(s => s.length > 0);
+  }
+
+  // Split page text into paragraphs, keeping chapters/headlines/paragraphs
+  // visually separated instead of collapsing everything into one blob.
+  function splitIntoParagraphs(text) {
+    return text
+      .split(/\n{2,}/)
+      .map(p => p.trim())
+      .filter(Boolean);
+  }
+
+  // A short line with no terminal punctuation is treated as a heading
+  // (chapter title, section header, etc.) and styled accordingly.
+  function isHeadingLike(paragraph) {
+    if (paragraph.length > 80) return false;
+    if (paragraph.includes('\n')) return false;
+    if (/[.!?…]\s*$/.test(paragraph)) return false;
+    return true;
+  }
+
+  function renderSentences(pageText) {
+    const paragraphs = splitIntoParagraphs(pageText);
+    sentences = [];
+    let html = '';
+
+    paragraphs.forEach(paragraph => {
+      // Preserve single line breaks inside a paragraph (e.g. address blocks,
+      // poem lines) while still allowing sentence splitting to work on it.
+      const lines = paragraph.split(/\n+/).map(l => l.trim()).filter(Boolean);
+      const heading = lines.length === 1 && isHeadingLike(lines[0]);
+      const parText = lines.join(' ');
+      const parSentences = splitIntoSentences(parText);
+      if (!parSentences.length) return;
+
+      const spans = parSentences.map(s => {
+        const idx = sentences.length;
+        sentences.push(s);
+        return `<span class="sentence" data-i="${idx}">${escapeHtml(s)} </span>`;
+      }).join('');
+
+      html += heading
+        ? `<p class="sv-paragraph sv-heading">${spans}</p>`
+        : `<p class="sv-paragraph">${spans}</p>`;
+    });
+
+    if (!sentences.length) {
+      sentences = [pageText || ''];
+      html = `<p class="sv-paragraph"><span class="sentence" data-i="0">${escapeHtml(pageText || '')} </span></p>`;
+    }
+
+    textDisplay.innerHTML = html;
+    textDisplay.style.fontSize = currentFontSize + 'px';
+  }
+
+  function highlightSentence(idx) {
+    const all = textDisplay.querySelectorAll('.sentence');
+    all.forEach(el => el.classList.remove('active'));
+    if (idx >= 0 && idx < all.length) {
+      all[idx].classList.add('active');
+      const rect = all[idx].getBoundingClientRect();
+      const box = textDisplay.getBoundingClientRect();
+      if (rect.top < box.top + 30 || rect.bottom > box.bottom - 30) {
+        all[idx].scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      }
+    }
+  }
+
+  // Allow free editing of the CURRENT page only — never collapse the whole document
+  function applyCurrentPageEdit() {
+    if (isPlaying) return;
+    const txt = textDisplay.innerText;
+    if (!txt.trim() || txt === i18n.fr.defaultText || txt === i18n.en.defaultText) return;
+
+    if (pages.length > 1) {
+      pages[currentPage] = txt;
+      allText = pages.join('\n\n');
+    } else {
+      allText = txt;
+      splitPages(allText);
+    }
+  }
+
+  textDisplay.oninput = () => {
+    upd();
+  };
+  textDisplay.onblur = () => {
+    applyCurrentPageEdit();
+  };
+
+  document.getElementById('fontPlus').onclick = () => {
+    currentFontSize = Math.min(32, currentFontSize + 1);
+    textDisplay.style.fontSize = currentFontSize + 'px';
+  };
+  document.getElementById('fontMinus').onclick = () => {
+    currentFontSize = Math.max(12, currentFontSize - 1);
+    textDisplay.style.fontSize = currentFontSize + 'px';
+  };
+
+  // Audio
+  function applyAudioSettings() {
+    const r = parseFloat(document.getElementById('rate').value);
+    const p = parseFloat(document.getElementById('pitch').value);
+    const v = parseFloat(document.getElementById('vol').value);
+    document.getElementById('rv').textContent = r.toFixed(1);
+    document.getElementById('pv').textContent = p.toFixed(1);
+    document.getElementById('vv').textContent = Math.round(v * 100) + '%';
+  }
+  document.getElementById('rate').oninput = applyAudioSettings;
+  document.getElementById('pitch').oninput = applyAudioSettings;
+  document.getElementById('vol').oninput = applyAudioSettings;
+
+  function setPreset(type) {
+    const map = {
+      normal: { rate:1.0, pitch:1.0, vol:1.0 },
+      rapide: { rate:1.35, pitch:1.05, vol:1.0 },
+      cinema: { rate:0.85, pitch:0.9, vol:1.0 }
+    };
+    const s = map[type];
+    if (!s) return;
+    document.getElementById('rate').value = s.rate;
+    document.getElementById('pitch').value = s.pitch;
+    document.getElementById('vol').value = s.vol;
+    applyAudioSettings();
+  }
+  document.getElementById('presetNormal').onclick = () => setPreset('normal');
+  document.getElementById('presetRapide').onclick = () => setPreset('rapide');
+  document.getElementById('presetCinema').onclick = () => setPreset('cinema');
+
+  function upd() {
+    const raw = textDisplay.innerText || '';
+    const w = raw.trim().split(/\s+/).filter(Boolean).length;
+    document.getElementById('wordCount').textContent = w + ' ' + t('words');
+  }
+
+  function splitPages(txt) {
+    const cleaned = txt.replace(/\r\n/g, '\n').replace(/\n{3,}/g, '\n\n');
+    const paragraphs = cleaned.split(/\n\n+/);
+    const chunks = [];
+    let current = '';
+    for (const p of paragraphs) {
+      if ((current + '\n\n' + p).length > CHUNK_SIZE) {
+        if (current) chunks.push(current.trim());
+        current = p;
+      } else {
+        current += (current ? '\n\n' : '') + p;
+      }
+    }
+    if (current) chunks.push(current.trim());
+    pages = chunks.length ? chunks : [txt];
+    currentPage = 0;
     showCurrentPage();
     renderPdfViewer();
-    setTimeout(()=>{ playPause(); }, 300);
-   }else{
-    isPlaying=false; isPaused=false;
-    document.getElementById('playPauseBtn').innerText=i18n[uiLang].play;
-   }
+    addHistory(txt.slice(0, 50));
   }
- };
- 
- currentUtterance.onerror=()=>{
-  if(!isPaused){
-   isPlaying=false; isPaused=false;
-   document.getElementById('playPauseBtn').innerText=i18n[uiLang].play;
+
+  function showCurrentPage() {
+    const text = pages[currentPage] || '';
+    renderSentences(text);
+    document.getElementById('pageInfo').textContent = `${t('page')} ${currentPage+1}/${pages.length}`;
+    const pct = Math.round(((currentPage+1)/Math.max(1, pages.length))*100);
+    document.getElementById('pctInfo').textContent = pct + '%';
+    upd();
+    updatePageBar();
+    savePosition();
   }
- };
- 
- synth.speak(currentUtterance);
-}
 
-document.getElementById('playPauseBtn').onclick=playPause;
-document.getElementById('stopBtn').onclick=()=>{
- synth.cancel();
- isPlaying=false; isPaused=false; charCursor=0;
- document.getElementById('playPauseBtn').innerText=i18n[uiLang].play;
- prog.style.width='0%';
- document.getElementById('pctInfo').innerText='0%';
- showCurrentPage();
-};
+  function updatePageBar() {
+    const dock = document.getElementById('pageDock');
+    const label = document.getElementById('pageBarLabel');
+    const nums = document.getElementById('pageNums');
+    if (!dock || !label || !nums) return;
 
-document.getElementById('rate').oninput=e=>{document.getElementById('rv').innerText=e.target.value;};
-document.getElementById('pitch').oninput=e=>{document.getElementById('pv').innerText=e.target.value;};
-document.getElementById('vol').oninput=e=>{document.getElementById('vv').innerText=Math.round(e.target.value*100)+'%';};
+    const total = Math.max(1, pages.length);
+    const hasContent = pages.some(p => (p || '').trim()) &&
+      (pages[0] || '') !== i18n.fr.defaultText &&
+      (pages[0] || '') !== i18n.en.defaultText;
 
-document.getElementById('openBtn').onclick=()=>document.getElementById('fileInput').click();
-document.getElementById('fileInput').onchange=async e=>{
- let f=e.target.files[0];if(!f)return;
- try{
-  let full="";
-  if(f.name.endsWith('.docx')){
-   let zip=new JSZip();
-   let content=await zip.loadAsync(f);
-   let xml=await content.file("word/document.xml").async("string");
-   let parser=new DOMParser();
-   let xmlDoc=parser.parseFromString(xml,"text/xml");
-   let paragraphs = xmlDoc.getElementsByTagName("w:p");
-   for(let p of paragraphs){
-    let texts = p.getElementsByTagName("w:t");
-    let pText = "";
-    for(let t of texts) pText += t.textContent;
-    if(pText.trim()) full += pText + "\n\n";
-   }
-  }else if(f.name.endsWith('.pdf')){
-   let arrayBuffer = await f.arrayBuffer();
-   let loadingTask = pdfjsLib.getDocument({data: arrayBuffer});
-   let pdfDoc = await loadingTask.promise;
-   for (let i = 1; i <= pdfDoc.numPages; i++) {
-    let page = await pdfDoc.getPage(i);
-    let textContent = await page.getTextContent();
-    let pageText = textContent.items.map(item => item.str).join(" ");
-    full += pageText + "\n\n";
-   }
-  }else{
-   full=await f.text();
+    if (!hasContent && !isPlaying) {
+      dock.classList.remove('show');
+      dock.style.display = 'none';
+      return;
+    }
+
+    dock.classList.add('show');
+    dock.style.display = 'flex';
+    label.textContent = `${t('page')} ${currentPage + 1} / ${total}`;
+    nums.innerHTML = Array.from({ length: total }, (_, i) =>
+      `<button type="button" class="page-num ${i === currentPage ? 'active' : ''}" data-i="${i}">${i + 1}</button>`
+    ).join('');
+    nums.querySelectorAll('.page-num').forEach(btn => {
+      btn.onclick = () => {
+        const idx = parseInt(btn.dataset.i, 10);
+        if (!isNaN(idx)) goPage(idx);
+      };
+    });
+    const active = nums.querySelector('.page-num.active');
+    if (active) active.scrollIntoView({ inline: 'center', block: 'nearest' });
   }
-  allText=full;
-  splitPages(allText);
- }catch(err){
-  alert('Erreur lors de la lecture du document.');
- }
-};
 
-document.getElementById('pagesBtn').onclick=()=>{let r=prompt(`Total pages: ${pages.length}. Plage (ex: 1-3)`);if(r&&r.includes('-')){let [s]=r.split('-').map(x=>parseInt(x));currentPage=s-1;showCurrentPage();renderPdfViewer();}};
-document.getElementById('searchBtn').onclick=()=>{let inp=document.getElementById('searchInput');inp.style.display=inp.style.display==='none'?'block':'none';if(inp.style.display==='block')inp.focus();};
-document.getElementById('searchInput').oninput=e=>{let q=e.target.value.toLowerCase();if(!q)return;let idx=allText.toLowerCase().indexOf(q);if(idx>=0){let pg=Math.floor(idx/1600);currentPage=pg;showCurrentPage();renderPdfViewer();}};
+  function renderPdfViewer() {
+    const viewer = document.getElementById('pdfViewer');
+    updatePageBar();
+    if (pages.length <= 1) {
+      viewer.classList.remove('show');
+      viewer.style.display = 'none';
+      viewer.innerHTML = '';
+      return;
+    }
+    viewer.classList.add('show');
+    viewer.style.display = 'block';
+    viewer.innerHTML = pages.map((p, i) =>
+      `<div class="pdf-page ${i===currentPage?'active':''}" data-i="${i}">
+        <b>${t('page')} ${i+1}</b> — ${escapeHtml(p.slice(0,50))}…
+      </div>`
+    ).join('');
+    viewer.querySelectorAll('.pdf-page').forEach(el => {
+      el.onclick = () => {
+        const idx = parseInt(el.dataset.i);
+        if (!isNaN(idx)) goPage(idx);
+      };
+    });
+  }
 
-document.getElementById('bookmarkBtn').onclick=()=>{db.bookmarks.unshift({id:Date.now(),page:currentPage+1,t:pages[currentPage].slice(0,40)});localStorage.setItem('sirvox_v79',JSON.stringify(db));renderBm();};
+  function goPage(i) {
+    if (i < 0 || i >= pages.length) return;
+    // Always stop current speech cleanly when changing page
+    try { synth.cancel(); } catch(_){}
+    isPlaying = false;
+    isPaused = false;
+    document.body.classList.remove('playing');
+    document.getElementById('playPauseBtn').textContent = t('play');
+    prog.style.width = '0%';
+    currentPage = i;
+    sentenceIndex = 0;
+    showCurrentPage();
+    renderPdfViewer();
+    savePosition();
+  }
 
-document.getElementById('prevBtn').onclick=()=>{if(currentPage>0){currentPage--;showCurrentPage();renderPdfViewer();}};
-document.getElementById('nextBtn').onclick=()=>{if(currentPage<pages.length-1){currentPage++;showCurrentPage();renderPdfViewer();}};
-document.getElementById('saveBtn').onclick=()=>{db.docs.unshift({id:Date.now(),title:'Livre/Cours '+(db.docs.length+1),text:allText.slice(0,50000),date:new Date().toLocaleString()});localStorage.setItem('sirvox_v79',JSON.stringify(db));renderLib();upd();};
+  // ——— Position memory ———
+  function savePosition() {
+    if (!currentDocId) return;
+    db.positions[currentDocId] = { page: currentPage, sentence: sentenceIndex };
+    saveDB();
+  }
+  function restorePosition(docId) {
+    const pos = db.positions[docId];
+    if (pos) {
+      currentPage = Math.min(pos.page || 0, pages.length - 1);
+      sentenceIndex = pos.sentence || 0;
+    }
+  }
 
-function addHistory(snippet){
- db.history.unshift({id:Date.now(),t:snippet,date:new Date().toLocaleTimeString()});
- if(db.history.length>10) db.history.pop();
- localStorage.setItem('sirvox_v79',JSON.stringify(db));
- renderHist();
-}
+  // ——— Speech (sentence based + exact resume) ———
+  function startSentenceSpeech() {
+    if (sentenceIndex >= sentences.length) {
+      if (currentPage < pages.length - 1) {
+        currentPage++;
+        showCurrentPage();
+        renderPdfViewer();
+        sentenceIndex = 0;
+        setTimeout(() => startSentenceSpeech(), 280);
+      } else {
+        isPlaying = false;
+        isPaused = false;
+        document.body.classList.remove('playing');
+        document.getElementById('playPauseBtn').textContent = t('play');
+        highlightSentence(-1);
+        prog.style.width = '100%';
+        savePosition();
+      }
+      return;
+    }
 
-function renderBm(){let el=document.getElementById('bookmarks');el.innerHTML=db.bookmarks.length?db.bookmarks.map(b=>`<div class="list-item"><div><b>Page ${b.page}</b> - ${b.t}...</div><button class="btn-sec" style="background:#ff3b3b15;color:#d9534f;border-color:#d9534f" onclick="delB(${b.id})">${i18n[uiLang].delete}</button></div>`).join(''):`<p style="color:#888;font-size:11px">${i18n[uiLang].empty}</p>`;}
-window.delB=id=>{db.bookmarks=db.bookmarks.filter(b=>b.id!=id);localStorage.setItem('sirvox_v79',JSON.stringify(db));renderBm();};
+    const sentence = sentences[sentenceIndex];
+    highlightSentence(sentenceIndex);
+    savePosition();
 
-function renderLib(){let el=document.getElementById('libList');el.innerHTML=db.docs.length?db.docs.map(d=>`<div class="list-item"><div><b>${d.title}</b><br><small style="color:#666">${d.date}</small></div><div style="display:flex;gap:4px;"><button class="btn-sec" onclick="loadDoc(${d.id})">${i18n[uiLang].open}</button><button class="btn-sec" style="background:#ff3b3b15;color:#d9534f;border-color:#d9534f" onclick="delDoc(${d.id})">${i18n[uiLang].delete}</button></div></div>`).join(''):`<p style="color:#888;font-size:11px">${i18n[uiLang].empty}</p>`;}
-window.loadDoc=id=>{let d=db.docs.find(x=>x.id===id);if(d){allText=d.text;splitPages(allText);upd();}};
-window.delDoc=id=>{db.docs=db.docs.filter(d=>d.id!=id);localStorage.setItem('sirvox_v79',JSON.stringify(db));renderLib();upd();};
+    currentUtterance = new SpeechSynthesisUtterance(sentence);
+    currentUtterance.lang = selectedLang;
+    if (selectedVoice) currentUtterance.voice = selectedVoice;
+    currentUtterance.rate = parseFloat(document.getElementById('rate').value);
+    currentUtterance.pitch = parseFloat(document.getElementById('pitch').value);
+    currentUtterance.volume = parseFloat(document.getElementById('vol').value);
 
-function renderHist(){let el=document.getElementById('historyList');el.innerHTML=db.history.length?db.history.map(h=>`<div class="list-item"><div><small style="color:#27ae60">${h.date}</small><br>${h.t}...</div></div>`).join(''):`<p style="color:#888;font-size:11px">${i18n[uiLang].empty}</p>`;}
+    // Slightly reduce pause feeling on English by a tiny rate boost on short sentences
+    if (selectedLang.startsWith('en') && sentence.length < 40) {
+      currentUtterance.rate = Math.min(2, currentUtterance.rate * 1.05);
+    }
 
-setUILang('fr');renderBm();renderLib();renderHist();renderLangList();
+    const progress = (sentenceIndex + 1) / Math.max(1, sentences.length);
+    prog.style.width = (progress * 100) + '%';
+    document.getElementById('pctInfo').textContent = Math.round(progress * 100) + '%';
+
+    currentUtterance.onend = () => {
+      if (!isPlaying || isPaused) return;
+      sentenceIndex++;
+      startSentenceSpeech();
+    };
+    currentUtterance.onerror = () => {
+      if (isPlaying && !isPaused) {
+        sentenceIndex++;
+        setTimeout(() => startSentenceSpeech(), 80);
+      }
+    };
+
+    synth.speak(currentUtterance);
+  }
+
+  function stopSpeech(keepPage) {
+    synth.cancel();
+    isPlaying = false;
+    isPaused = false;
+    document.body.classList.remove('playing');
+    document.getElementById('playPauseBtn').textContent = t('play');
+    prog.style.width = '0%';
+    document.getElementById('pctInfo').textContent = '0%';
+    highlightSentence(-1);
+    if (!keepPage) {
+      sentenceIndex = 0;
+      showCurrentPage();
+    }
+    updatePageBar();
+    savePosition();
+  }
+
+  function playPause() {
+    const btn = document.getElementById('playPauseBtn');
+
+    if (isPlaying && !isPaused) {
+      try { synth.pause(); } catch(_){}
+      synth.cancel();
+      isPaused = true;
+      isPlaying = false;
+      btn.textContent = t('resumeTxt');
+      savePosition();
+      return;
+    }
+
+    if (isPaused) {
+      // Exact resume: continue from current sentenceIndex
+      isPaused = false;
+      isPlaying = true;
+      document.body.classList.add('playing');
+      btn.textContent = t('pauseTxt');
+      startSentenceSpeech();
+      return;
+    }
+
+    // Fresh start — never re-split the whole document from the visible page
+    synth.cancel();
+    applyCurrentPageEdit();
+    let text = pages[currentPage] || textDisplay.innerText || '';
+    if (!text.trim() || text === i18n.fr.defaultText || text === i18n.en.defaultText) {
+      toast(t('noText'));
+      return;
+    }
+    renderSentences(text);
+    if (sentenceIndex >= sentences.length) sentenceIndex = 0;
+    isPlaying = true;
+    isPaused = false;
+    document.body.classList.add('playing');
+    btn.textContent = t('pauseTxt');
+    renderPdfViewer();
+    updatePageBar();
+    startSentenceSpeech();
+  }
+
+  document.getElementById('playPauseBtn').onclick = playPause;
+  document.getElementById('stopBtn').onclick = () => {
+    sentenceIndex = 0;
+    stopSpeech(false);
+  };
+
+  // ——— File import (text only, even if images present) ———
+  const fileInput = document.getElementById('fileInput');
+  const dropZone = document.getElementById('dropZone');
+  const loadingEl = document.getElementById('loading');
+
+  document.getElementById('openBtn').onclick = () => fileInput.click();
+  dropZone.onclick = () => fileInput.click();
+
+  ['dragenter','dragover'].forEach(ev => {
+    dropZone.addEventListener(ev, e => { e.preventDefault(); dropZone.classList.add('dragover'); });
+  });
+  ['dragleave','drop'].forEach(ev => {
+    dropZone.addEventListener(ev, e => { e.preventDefault(); dropZone.classList.remove('dragover'); });
+  });
+  dropZone.addEventListener('drop', e => {
+    if (e.dataTransfer.files[0]) handleFile(e.dataTransfer.files[0]);
+  });
+  fileInput.onchange = e => {
+    if (e.target.files[0]) handleFile(e.target.files[0]);
+    fileInput.value = '';
+  };
+
+  async function handleFile(file) {
+    if (!file) return;
+    if (file.size > MAX_FILE_SIZE) { toast(t('tooBig')); return; }
+    loadingEl.classList.add('show');
+    try {
+      let full = '';
+      const name = (file.name || '').toLowerCase();
+      if (name.endsWith('.docx') || (file.type||'').includes('wordprocessingml')) {
+        full = await extractDocx(file);
+      } else if (name.endsWith('.pdf') || file.type === 'application/pdf') {
+        full = await extractPdf(file);
+      } else {
+        full = await readAsText(file);
+      }
+      if (!full || !full.trim()) { toast(t('errorRead')); return; }
+      allText = full;
+      currentDocId = 'file_' + Date.now();
+      splitPages(allText);
+      toast('✓ ' + (file.name || 'Document'));
+    } catch (err) {
+      console.error(err);
+      toast(t('errorRead'));
+    } finally {
+      loadingEl.classList.remove('show');
+    }
+  }
+
+  function readAsText(file) {
+    return new Promise((res, rej) => {
+      const r = new FileReader();
+      r.onload = () => res(r.result || '');
+      r.onerror = () => rej(r.error);
+      r.readAsText(file, 'UTF-8');
+    });
+  }
+  function readAsArrayBuffer(file) {
+    return new Promise((res, rej) => {
+      const r = new FileReader();
+      r.onload = () => res(r.result);
+      r.onerror = () => rej(r.error);
+      r.readAsArrayBuffer(file);
+    });
+  }
+  function decodeXmlEntities(str) {
+    return str
+      .replace(/&lt;/g, '<')
+      .replace(/&gt;/g, '>')
+      .replace(/&quot;/g, '"')
+      .replace(/&apos;/g, "'")
+      .replace(/&amp;/g, '&');
+  }
+
+  // Regex-based DOCX extraction (instead of DOMParser XML mode).
+  // DOMParser's handling of namespaced tags like <w:p> is inconsistent
+  // across engines (notably WebKit/Safari on iPhone and some desktop
+  // browsers) and can silently return zero paragraphs. Plain string/regex
+  // parsing behaves identically on every platform.
+  async function extractDocx(file) {
+    const ab = await readAsArrayBuffer(file);
+    const zip = await JSZip.loadAsync(ab);
+    const xmlFile = zip.file('word/document.xml');
+    if (!xmlFile) throw new Error('Invalid DOCX (missing word/document.xml)');
+    const xml = await xmlFile.async('string');
+
+    const paragraphMatches = xml.match(/<w:p[ >][\s\S]*?<\/w:p>/g) || [];
+    let full = '';
+    for (const p of paragraphMatches) {
+      const withBreaks = p
+        .replace(/<w:br[^/]*\/>/g, '\n')
+        .replace(/<w:tab[^/]*\/>/g, '\t');
+      const textMatches = withBreaks.match(/<w:t[^>]*>([\s\S]*?)<\/w:t>/g) || [];
+      const paragraphText = textMatches
+        .map(m => decodeXmlEntities(m.replace(/<w:t[^>]*>/, '').replace(/<\/w:t>/, '')))
+        .join('');
+      if (paragraphText.trim()) full += paragraphText + '\n\n';
+    }
+    if (!full.trim()) throw new Error('No readable text found in DOCX');
+    return full;
+  }
+
+  async function extractPdf(file) {
+    if (typeof pdfjsLib === 'undefined') {
+      throw new Error('pdf.js not loaded (blocked network or offline)');
+    }
+    // Extract text only – images are ignored (good for heavy image PDFs).
+    // Groups items into visual lines (by y-position) so we can both
+    // reconstruct paragraph/line breaks AND detect + drop isolated
+    // page-number lines (typical header/footer folios like "12" or "- 12 -")
+    // that were otherwise getting read aloud in the middle of sentences.
+    let pdf;
+    try {
+      const ab = await readAsArrayBuffer(file);
+      pdf = await pdfjsLib.getDocument({ data: ab }).promise;
+    } catch (workerErr) {
+      // Some browsers (notably Safari/WebKit, and locked-down desktop
+      // setups) can block the pdf.js background worker. Retry on the
+      // main thread rather than failing the import entirely.
+      console.warn('PDF worker failed, retrying without worker:', workerErr);
+      const ab2 = await readAsArrayBuffer(file);
+      pdf = await pdfjsLib.getDocument({ data: ab2, disableWorker: true }).promise;
+    }
+
+    const pageNumberLine = /^[\s\-–—_.]*\d{1,4}[\s\-–—_.]*$/;
+    let full = '';
+
+    for (let i = 1; i <= pdf.numPages; i++) {
+      const page = await pdf.getPage(i);
+      const content = await page.getTextContent();
+
+      // Group text items into lines by vertical position
+      const lines = [];
+      for (const item of content.items) {
+        const y = item.transform ? item.transform[5] : 0;
+        let line = lines.find(l => Math.abs(l.y - y) < 2);
+        if (!line) { line = { y, height: item.height || 10, parts: [] }; lines.push(line); }
+        line.parts.push(item.str);
+      }
+
+      let pageText = '';
+      let prevY = null;
+      lines.forEach((line, idx) => {
+        const text = line.parts.join(' ').replace(/\s+/g, ' ').trim();
+        if (!text) return;
+        // Skip a standalone numeric line sitting at the very top or bottom
+        // of the page — almost always a running page number, not content.
+        if (pageNumberLine.test(text) && (idx === 0 || idx === lines.length - 1)) return;
+        if (prevY !== null) {
+          const dy = Math.abs(prevY - line.y);
+          pageText += dy > (line.height || 10) * 1.5 ? '\n\n' : '\n';
+        }
+        pageText += text;
+        prevY = line.y;
+      });
+
+      if (pageText.trim()) full += pageText.trim() + '\n\n';
+    }
+    return full;
+  }
+
+  // ——— Navigation ———
+  document.getElementById('pagesBtn').onclick = () => {
+    const r = prompt(`${t('page')}s: 1-${pages.length}\nEx: 2-5`);
+    if (r && r.includes('-')) {
+      const s = parseInt(r.split('-')[0].trim());
+      if (!isNaN(s) && s >= 1 && s <= pages.length) goPage(s - 1);
+    }
+  };
+  document.getElementById('searchBtn').onclick = () => {
+    const inp = document.getElementById('searchInput');
+    inp.style.display = inp.style.display === 'none' ? 'block' : 'none';
+    if (inp.style.display === 'block') inp.focus();
+  };
+  document.getElementById('searchInput').oninput = e => {
+    const q = e.target.value.trim().toLowerCase();
+    if (!q || !allText) return;
+    const idx = allText.toLowerCase().indexOf(q);
+    if (idx < 0) return;
+    let pos = 0;
+    for (let i = 0; i < pages.length; i++) {
+      if (pos + pages[i].length >= idx) { goPage(i); break; }
+      pos += pages[i].length + 2;
+    }
+  };
+
+  document.getElementById('prevBtn').onclick = () => { if (currentPage > 0) goPage(currentPage - 1); };
+  document.getElementById('nextBtn').onclick = () => { if (currentPage < pages.length - 1) goPage(currentPage + 1); };
+  document.getElementById('pageBarPrev').onclick = () => { if (currentPage > 0) goPage(currentPage - 1); };
+  document.getElementById('pageBarNext').onclick = () => { if (currentPage < pages.length - 1) goPage(currentPage + 1); };
+
+  document.getElementById('bookmarkBtn').onclick = () => {
+    db.bookmarks.unshift({ id: Date.now(), page: currentPage + 1, t: (pages[currentPage]||'').slice(0,50) });
+    saveDB();
+    renderBm();
+    toast('✓');
+  };
+
+  // ——— Library with rename ———
+  document.getElementById('saveBtn').onclick = () => {
+    if (!allText || allText.length < 15) { toast(t('noText')); return; }
+    if (getStorageSize() > MAX_STORAGE * 0.95) { toast(t('storageFull')); return; }
+
+    const title = prompt(uiLang === 'fr' ? 'Nom du document :' : 'Document name:', 'Doc ' + (db.docs.length + 1));
+    if (title === null) return;
+
+    const id = Date.now();
+    db.docs.unshift({
+      id,
+      title: title.trim() || ('Doc ' + (db.docs.length + 1)),
+      text: allText.slice(0, 120000),
+      date: new Date().toLocaleString()
+    });
+    currentDocId = id;
+    if (db.docs.length > 20) db.docs = db.docs.slice(0, 20);
+    saveDB();
+    renderLib();
+    toast(t('saved'));
+  };
+
+  function addHistory(snippet) {
+    db.history.unshift({ id: Date.now(), t: snippet, date: new Date().toLocaleTimeString() });
+    if (db.history.length > 12) db.history.pop();
+    saveDB();
+    renderHist();
+  }
+
+  function renderBm() {
+    const el = document.getElementById('bookmarks');
+    el.innerHTML = db.bookmarks.length ? db.bookmarks.map(b =>
+      `<div class="list-item"><div><b>${t('page')} ${b.page}</b> — ${escapeHtml(b.t)}…</div>
+       <button class="btn-sec" style="background:rgba(217,83,79,.15);color:var(--danger);border-color:var(--danger);flex:0" data-id="${b.id}">${t('delete')}</button></div>`
+    ).join('') : `<p style="color:var(--muted);font-size:12px">${t('empty')}</p>`;
+    el.querySelectorAll('[data-id]').forEach(btn => {
+      btn.onclick = () => {
+        db.bookmarks = db.bookmarks.filter(b => b.id != btn.dataset.id);
+        saveDB(); renderBm();
+      };
+    });
+  }
+
+  function renderLib() {
+    const el = document.getElementById('libList');
+    el.innerHTML = db.docs.length ? db.docs.map(d =>
+      `<div class="list-item">
+        <div style="flex:1;min-width:0">
+          <b class="doc-title" data-id="${d.id}">${escapeHtml(d.title)}</b><br>
+          <small style="color:var(--muted)">${d.date}</small>
+        </div>
+        <div style="display:flex;gap:5px;flex-shrink:0">
+          <button class="btn-sec" data-load="${d.id}">${t('open')}</button>
+          <button class="btn-sec" data-rename="${d.id}" style="padding:6px 8px">✎</button>
+          <button class="btn-sec" style="background:rgba(217,83,79,.15);color:var(--danger);border-color:var(--danger)" data-del="${d.id}">${t('delete')}</button>
+        </div>
+      </div>`
+    ).join('') : `<p style="color:var(--muted);font-size:12px">${t('empty')}</p>`;
+
+    el.querySelectorAll('[data-load]').forEach(btn => {
+      btn.onclick = () => {
+        const d = db.docs.find(x => x.id == btn.dataset.load);
+        if (d) {
+          allText = d.text;
+          currentDocId = d.id;
+          splitPages(allText);
+          restorePosition(d.id);
+          showCurrentPage();
+          renderPdfViewer();
+          upd();
+        }
+      };
+    });
+    el.querySelectorAll('[data-del]').forEach(btn => {
+      btn.onclick = () => {
+        db.docs = db.docs.filter(d => d.id != btn.dataset.del);
+        delete db.positions[btn.dataset.del];
+        saveDB(); renderLib();
+      };
+    });
+    el.querySelectorAll('[data-rename]').forEach(btn => {
+      btn.onclick = () => {
+        const d = db.docs.find(x => x.id == btn.dataset.rename);
+        if (!d) return;
+        const newName = prompt(t('rename') + ' :', d.title);
+        if (newName !== null && newName.trim()) {
+          d.title = newName.trim();
+          saveDB(); renderLib();
+        }
+      };
+    });
+  }
+
+  function renderHist() {
+    const el = document.getElementById('historyList');
+    el.innerHTML = db.history.length ? db.history.map(h =>
+      `<div class="list-item"><div><small style="color:#27ae60">${h.date}</small><br>${escapeHtml(h.t)}…</div></div>`
+    ).join('') : `<p style="color:var(--muted);font-size:12px">${t('empty')}</p>`;
+  }
+
+  // Init
+  setUILang('fr');
+  renderLangList();
+  renderBm(); renderLib(); renderHist();
+  populateVoiceSelect();
+  applyAudioSettings();
+  updateStorageUI();
+  showWelcomeIfNeeded();
+
+  // Set default text
+  if (!allText) textDisplay.innerText = i18n.fr.defaultText;
+})();
+</script>
+<script>
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+      navigator.serviceWorker.register('sw.js').catch(err => console.warn('SW registration failed:', err));
+    });
+  }
 </script>
 </body>
 </html>
