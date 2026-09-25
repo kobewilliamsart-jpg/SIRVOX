@@ -1,5 +1,11 @@
-const CACHE_NAME = 'sirvox-v1';
-const APP_SHELL = ['./', './index.html', './manifest.json', './icon-192.png', './icon-512.png'];
+const CACHE_NAME = 'sirvox-v2';
+const APP_SHELL = [
+  './', './index.html', './manifest.json', './icon-192.png', './icon-512.png',
+  './splash/splash-1125x2436.png','./splash/splash-1170x2532.png','./splash/splash-1179x2556.png',
+  './splash/splash-1242x2208.png','./splash/splash-1242x2688.png','./splash/splash-1284x2778.png',
+  './splash/splash-1290x2796.png','./splash/splash-1668x2388.png','./splash/splash-640x1136.png',
+  './splash/splash-750x1334.png','./splash/splash-828x1792.png'
+];
 
 self.addEventListener('install', event => {
   event.waitUntil(

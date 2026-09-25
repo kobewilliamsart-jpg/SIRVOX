@@ -11,6 +11,17 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="SIRVOX">
+<link rel="apple-touch-startup-image" href="splash/splash-640x1136.png" media="(device-width: 320px) and (device-height: 568px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)">
+<link rel="apple-touch-startup-image" href="splash/splash-750x1334.png" media="(device-width: 375px) and (device-height: 667px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)">
+<link rel="apple-touch-startup-image" href="splash/splash-1242x2208.png" media="(device-width: 414px) and (device-height: 736px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)">
+<link rel="apple-touch-startup-image" href="splash/splash-1125x2436.png" media="(device-width: 375px) and (device-height: 812px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)">
+<link rel="apple-touch-startup-image" href="splash/splash-828x1792.png" media="(device-width: 414px) and (device-height: 896px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)">
+<link rel="apple-touch-startup-image" href="splash/splash-1242x2688.png" media="(device-width: 414px) and (device-height: 896px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)">
+<link rel="apple-touch-startup-image" href="splash/splash-1170x2532.png" media="(device-width: 390px) and (device-height: 844px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)">
+<link rel="apple-touch-startup-image" href="splash/splash-1179x2556.png" media="(device-width: 393px) and (device-height: 852px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)">
+<link rel="apple-touch-startup-image" href="splash/splash-1284x2778.png" media="(device-width: 428px) and (device-height: 926px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)">
+<link rel="apple-touch-startup-image" href="splash/splash-1290x2796.png" media="(device-width: 430px) and (device-height: 932px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)">
+<link rel="apple-touch-startup-image" href="splash/splash-1668x2388.png" media="(device-width: 834px) and (device-height: 1194px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
 <script>
@@ -130,6 +141,7 @@ body.immersion #rv,
 body.immersion #pv,
 body.immersion #vv,
 body.immersion #toolsCard,
+body.immersion #installBanner,
 body.immersion #saveBtn,
 body.immersion #fontPlus,
 body.immersion #fontMinus,
@@ -233,6 +245,7 @@ body.immersion .controls {
       </div>
 
       <input type="file" id="fileInput" accept=".txt,.docx,.doc,.pdf,text/plain,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/octet-stream" hidden>
+<audio id="keepAliveAudio" loop playsinline style="display:none"></audio>
       
       <div class="drop-zone" id="dropZone">
         <div id="dropText">📄 Glissez un fichier ici (TXT, DOCX, PDF)<br><small>ou cliquez sur OUVRIR • Max 10 Mo</small></div>
@@ -297,14 +310,19 @@ body.immersion .controls {
           <input type="range" id="vol" min="0" max="1" step="0.05" value="1">
         </div>
       </div>
+      <div style="margin-top:10px">
+        <label id="lSleepTimer">MINUTERIE DE SOMMEIL</label>
+        <select id="sleepTimerSelect"></select>
+      </div>
     </div>
   </div>
 
   <div>
     <div class="card">
       <div class="controls">
-        <button class="btn btn-play" id="playPauseBtn">LIRE / PAUSE</button>
-        <button class="btn btn-stop" id="stopBtn">ARRÊTER</button>
+        <button class="btn btn-play" id="playPauseBtn" style="flex:1">LIRE / PAUSE</button>
+        <button class="btn-sec" id="repeatBtn" style="flex:0 0 auto;padding:13px 16px" title="Répéter la dernière phrase">↺</button>
+        <button class="btn btn-stop" id="stopBtn" style="flex:1">ARRÊTER</button>
       </div>
       <div class="controls">
         <button class="btn-sec" id="prevBtn">◀ PAGE</button>
@@ -374,6 +392,20 @@ body.immersion .controls {
 </div>
 
 <input type="file" id="aiImageInput" accept="image/*" hidden>
+
+<!-- Install prompt banner (Android: real install button / iOS: manual instructions) -->
+<div id="installBanner" style="display:none;position:fixed;left:12px;right:12px;bottom:12px;z-index:9999;background:var(--card);border:1px solid var(--border);border-radius:14px;padding:14px;box-shadow:0 8px 24px rgba(0,0,0,.25)">
+  <div style="display:flex;align-items:flex-start;gap:10px">
+    <img src="icon-192.png" style="width:40px;height:40px;border-radius:10px;flex:0 0 auto">
+    <div style="flex:1;min-width:0">
+      <div id="installBannerText" style="font-size:13px;line-height:1.5;margin-bottom:10px"></div>
+      <div style="display:flex;gap:8px">
+        <button class="btn-sec" id="installActionBtn" style="flex:1;background:var(--accent-strong);color:var(--accent-text);font-weight:700;display:none"></button>
+        <button class="btn-sec" id="installDismissBtn" style="flex:0 0 auto;padding:9px 14px"></button>
+      </div>
+    </div>
+  </div>
+</div>
 
 <!-- Welcome Overlay -->
 <div class="welcome-overlay" id="welcomeOverlay" style="display:none">
@@ -461,7 +493,18 @@ body.immersion .controls {
       aiImageText:"Importer une image",
       aiNote:"La photo n'est jamais conservée : seul le texte extrait est gardé. Une connexion internet est nécessaire la première fois (téléchargement du modèle).",
       aiAnalyzing:"Analyse en cours…", aiError:"Impossible d'analyser cette image. Réessayez.",
-      aiDone:"✓ Texte extrait", aiNeedsInternet:"Activez votre connexion internet pour utiliser cette fonction (1ère fois)."
+      aiDone:"✓ Texte extrait", aiNeedsInternet:"Activez votre connexion internet pour utiliser cette fonction (1ère fois).",
+      installBannerText:"Installez SIRVOX sur votre téléphone pour un accès plus rapide et une utilisation hors ligne.",
+      installBtn:"Installer", installDismiss:"Plus tard",
+      iosInstallText:"Installez SIRVOX : appuyez sur l'icône Partager, puis sur « Sur l'écran d'accueil ».",
+      iosInstallDismiss:"J'ai compris",
+      repeatTitle:"Répéter la dernière phrase",
+      sleepTimer:"MINUTERIE DE SOMMEIL", sleepTimerOffOpt:"Désactivée",
+      sleepTimerSet:"⏱ Lecture arrêtée automatiquement dans {m} min",
+      sleepTimerOff:"Minuterie de sommeil désactivée",
+      sleepTimerFired:"⏱ Lecture arrêtée (minuterie de sommeil)",
+      bookmarkNamePrompt:"Nom du marque-page :",
+      bookmarkDocMissing:"(document supprimé)"
     },
     en: {
       doc:"DOCUMENT — OFFLINE READER", open:"OPEN", pages:"PAGES X-Y", search:"SEARCH",
@@ -485,7 +528,18 @@ body.immersion .controls {
       aiImageText:"Upload image",
       aiNote:"The photo is never kept — only the extracted text is saved. An internet connection is required the first time (downloads the recognition model).",
       aiAnalyzing:"Analyzing…", aiError:"Unable to analyze this image. Please try again.",
-      aiDone:"✓ Text extracted", aiNeedsInternet:"Please turn on your internet connection to use this feature (first time only)."
+      aiDone:"✓ Text extracted", aiNeedsInternet:"Please turn on your internet connection to use this feature (first time only).",
+      installBannerText:"Install SIRVOX on your phone for faster access and offline use.",
+      installBtn:"Install", installDismiss:"Later",
+      iosInstallText:"Install SIRVOX: tap the Share icon, then \"Add to Home Screen\".",
+      iosInstallDismiss:"Got it",
+      repeatTitle:"Repeat last sentence",
+      sleepTimer:"SLEEP TIMER", sleepTimerOffOpt:"Off",
+      sleepTimerSet:"⏱ Playback will stop automatically in {m} min",
+      sleepTimerOff:"Sleep timer off",
+      sleepTimerFired:"⏱ Playback stopped (sleep timer)",
+      bookmarkNamePrompt:"Bookmark name:",
+      bookmarkDocMissing:"(document deleted)"
     }
   };
 
@@ -700,10 +754,71 @@ body.immersion .controls {
     if (f) runOcrOnFile(f);
   };
 
+  // ——— Install prompt: custom banner instead of relying on the browser's own UI ———
+  // Android/Chrome/Edge expose `beforeinstallprompt`, which we intercept to show our
+  // own styled banner+button. iOS Safari has no such API at all — the only thing any
+  // web app can do there is show manual "tap Share > Add to Home Screen" instructions.
+  const isStandaloneMode = () =>
+    window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
+  const isIOS = () => /iphone|ipad|ipod/i.test(navigator.userAgent) && !window.MSStream;
+
+  let deferredInstallPrompt = null;
+
+  function showInstallBanner(mode) {
+    const banner = document.getElementById('installBanner');
+    if (!banner || db.installDismissed || isStandaloneMode()) return;
+    document.getElementById('installBannerText').textContent = mode === 'ios' ? t('iosInstallText') : t('installBannerText');
+    const actionBtn = document.getElementById('installActionBtn');
+    actionBtn.style.display = mode === 'android' ? 'block' : 'none';
+    actionBtn.textContent = t('installBtn');
+    document.getElementById('installDismissBtn').textContent = mode === 'ios' ? t('iosInstallDismiss') : t('installDismiss');
+    banner.style.display = 'block';
+    banner.dataset.mode = mode;
+  }
+
+  window.addEventListener('beforeinstallprompt', (e) => {
+    e.preventDefault();
+    deferredInstallPrompt = e;
+    showInstallBanner('android');
+  });
+
+  document.getElementById('installDismissBtn').onclick = () => {
+    document.getElementById('installBanner').style.display = 'none';
+    db.installDismissed = true;
+    saveDB();
+  };
+
+  document.getElementById('installActionBtn').onclick = async () => {
+    if (!deferredInstallPrompt) return;
+    document.getElementById('installBanner').style.display = 'none';
+    deferredInstallPrompt.prompt();
+    try { await deferredInstallPrompt.userChoice; } catch (_) {}
+    deferredInstallPrompt = null;
+    db.installDismissed = true;
+    saveDB();
+  };
+
+  window.addEventListener('appinstalled', () => {
+    document.getElementById('installBanner').style.display = 'none';
+    db.installDismissed = true;
+    saveDB();
+  });
+
+  if (isIOS() && !isStandaloneMode() && !db.installDismissed) {
+    setTimeout(() => showInstallBanner('ios'), 2500);
+  }
+
   // ——— UI Lang ———
   function setUILang(l) {
     uiLang = l;
     const tr = i18n[l];
+    const installBanner = document.getElementById('installBanner');
+    if (installBanner && installBanner.style.display !== 'none') {
+      const mode = installBanner.dataset.mode;
+      document.getElementById('installBannerText').textContent = mode === 'ios' ? tr.iosInstallText : tr.installBannerText;
+      document.getElementById('installActionBtn').textContent = tr.installBtn;
+      document.getElementById('installDismissBtn').textContent = mode === 'ios' ? tr.iosInstallDismiss : tr.installDismiss;
+    }
     document.getElementById('lDoc').textContent = tr.doc;
     document.getElementById('openBtn').textContent = tr.open;
     document.getElementById('pagesBtn').textContent = tr.pages;
@@ -733,6 +848,9 @@ body.immersion .controls {
     document.getElementById('aiNote').textContent = tr.aiNote;
     document.getElementById('layoutBtn').textContent = document.getElementById('app').classList.contains('desktop') ? tr.layoutMobile : tr.layout;
     document.getElementById('bookmarkBtn').textContent = tr.bookmark;
+    document.getElementById('repeatBtn').title = tr.repeatTitle;
+    document.getElementById('lSleepTimer').textContent = tr.sleepTimer;
+    populateSleepTimerOptions();
     document.getElementById('dropText').innerHTML = tr.drop;
     document.getElementById('loading').textContent = tr.loading;
     document.getElementById('immerseBtn').title = document.body.classList.contains('immersion') ? tr.immerseOn : tr.immerseOff;
@@ -1088,6 +1206,114 @@ body.immersion .controls {
     });
   }
 
+  // ——— Background playback: keep speech alive when the screen locks ———
+  // Mobile browsers aggressively suspend background tabs, including
+  // speechSynthesis. A silent looping <audio> element signals to the OS
+  // that "real" media is playing, which keeps Chrome/Safari from fully
+  // suspending the page — combined with the Media Session API below,
+  // this also gives us real lock-screen play/pause/skip controls.
+  const SILENT_WAV = 'data:audio/wav;base64,UklGRsQPAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YaAPAACAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICA';
+  const keepAliveAudio = document.getElementById('keepAliveAudio');
+  if (keepAliveAudio) keepAliveAudio.src = SILENT_WAV;
+
+  let wakeLockSentinel = null;
+  async function requestWakeLock() {
+    try {
+      if ('wakeLock' in navigator) wakeLockSentinel = await navigator.wakeLock.request('screen');
+    } catch (_) { /* not fatal — background playback still relies on the silent audio track */ }
+  }
+  function releaseWakeLock() {
+    try { wakeLockSentinel && wakeLockSentinel.release(); } catch (_) {}
+    wakeLockSentinel = null;
+  }
+
+  function startKeepAlive() {
+    if (keepAliveAudio) { keepAliveAudio.play().catch(() => {}); }
+    requestWakeLock();
+    if ('mediaSession' in navigator) navigator.mediaSession.playbackState = 'playing';
+  }
+  function pauseKeepAlive() {
+    if (keepAliveAudio) { try { keepAliveAudio.pause(); } catch (_) {} }
+    releaseWakeLock();
+    if ('mediaSession' in navigator) navigator.mediaSession.playbackState = 'paused';
+  }
+  function stopKeepAlive() {
+    if (keepAliveAudio) { try { keepAliveAudio.pause(); } catch (_) {} }
+    releaseWakeLock();
+    if ('mediaSession' in navigator) navigator.mediaSession.playbackState = 'none';
+  }
+
+  function updateMediaSessionMetadata() {
+    if (!('mediaSession' in navigator)) return;
+    const doc = currentDocId ? db.docs.find(d => d.id === currentDocId) : null;
+    try {
+      navigator.mediaSession.metadata = new MediaMetadata({
+        title: doc ? doc.title : 'SIRVOX',
+        artist: 'SIRVOX',
+        album: t('page') + ' ' + (currentPage + 1),
+        artwork: [
+          { src: 'icon-192.png', sizes: '192x192', type: 'image/png' },
+          { src: 'icon-512.png', sizes: '512x512', type: 'image/png' }
+        ]
+      });
+    } catch (_) {}
+  }
+
+  function setupMediaSession() {
+    if (!('mediaSession' in navigator)) return;
+    navigator.mediaSession.setActionHandler('play', () => { if (isPaused || !isPlaying) playPause(); });
+    navigator.mediaSession.setActionHandler('pause', () => { if (isPlaying && !isPaused) playPause(); });
+    navigator.mediaSession.setActionHandler('stop', () => stopSpeech(true));
+    navigator.mediaSession.setActionHandler('previoustrack', () => repeatLastSentence());
+    navigator.mediaSession.setActionHandler('nexttrack', () => {
+      if (!sentences.length) return;
+      synth.cancel();
+      sentenceIndex = Math.min(sentences.length - 1, sentenceIndex + 1);
+      isPlaying = true; isPaused = false;
+      document.body.classList.add('playing');
+      document.getElementById('playPauseBtn').textContent = t('pauseTxt');
+      startSentenceSpeech();
+    });
+  }
+
+  // ——— Repeat last sentence (go back one sentence and re-speak it) ———
+  function repeatLastSentence() {
+    if (!sentences.length) return;
+    synth.cancel();
+    sentenceIndex = Math.max(0, sentenceIndex - 1);
+    isPlaying = true;
+    isPaused = false;
+    document.body.classList.add('playing');
+    document.getElementById('playPauseBtn').textContent = t('pauseTxt');
+    startKeepAlive();
+    startSentenceSpeech();
+  }
+  document.getElementById('repeatBtn').onclick = repeatLastSentence;
+
+  // ——— Sleep / study timer ———
+  let sleepTimerId = null;
+  function populateSleepTimerOptions() {
+    const sel = document.getElementById('sleepTimerSelect');
+    if (!sel) return;
+    const current = sel.value || '0';
+    sel.innerHTML = [0, 10, 15, 20, 30, 45, 60].map(m =>
+      `<option value="${m}">${m === 0 ? t('sleepTimerOffOpt') : m + ' min'}</option>`
+    ).join('');
+    sel.value = current;
+  }
+  function setSleepTimer(minutes) {
+    if (sleepTimerId) { clearTimeout(sleepTimerId); sleepTimerId = null; }
+    if (!minutes) { toast(t('sleepTimerOff')); return; }
+    sleepTimerId = setTimeout(() => {
+      stopSpeech(true);
+      sleepTimerId = null;
+      document.getElementById('sleepTimerSelect').value = '0';
+      toast(t('sleepTimerFired'));
+    }, minutes * 60000);
+    toast(t('sleepTimerSet').replace('{m}', minutes));
+  }
+  document.getElementById('sleepTimerSelect').onchange = e => setSleepTimer(parseInt(e.target.value, 10) || 0);
+
   function goPage(i) {
     if (i < 0 || i >= pages.length) return;
     // Always stop current speech cleanly when changing page
@@ -1097,6 +1323,7 @@ body.immersion .controls {
     document.body.classList.remove('playing');
     document.getElementById('playPauseBtn').textContent = t('play');
     prog.style.width = '0%';
+    stopKeepAlive();
     currentPage = i;
     sentenceIndex = 0;
     showCurrentPage();
@@ -1134,6 +1361,8 @@ body.immersion .controls {
         document.getElementById('playPauseBtn').textContent = t('play');
         highlightSentence(-1);
         prog.style.width = '100%';
+        stopKeepAlive();
+        if (sleepTimerId) { clearTimeout(sleepTimerId); sleepTimerId = null; document.getElementById('sleepTimerSelect').value = '0'; }
         savePosition();
       }
       return;
@@ -1183,6 +1412,8 @@ body.immersion .controls {
     prog.style.width = '0%';
     document.getElementById('pctInfo').textContent = '0%';
     highlightSentence(-1);
+    stopKeepAlive();
+    if (sleepTimerId) { clearTimeout(sleepTimerId); sleepTimerId = null; document.getElementById('sleepTimerSelect').value = '0'; }
     if (!keepPage) {
       sentenceIndex = 0;
       showCurrentPage();
@@ -1200,6 +1431,7 @@ body.immersion .controls {
       isPaused = true;
       isPlaying = false;
       btn.textContent = t('resumeTxt');
+      pauseKeepAlive();
       savePosition();
       return;
     }
@@ -1210,6 +1442,7 @@ body.immersion .controls {
       isPlaying = true;
       document.body.classList.add('playing');
       btn.textContent = t('pauseTxt');
+      startKeepAlive();
       startSentenceSpeech();
       return;
     }
@@ -1230,6 +1463,8 @@ body.immersion .controls {
     btn.textContent = t('pauseTxt');
     renderPdfViewer();
     updatePageBar();
+    updateMediaSessionMetadata();
+    startKeepAlive();
     startSentenceSpeech();
   }
 
@@ -1430,12 +1665,43 @@ body.immersion .controls {
   document.getElementById('pageBarPrev').onclick = () => { if (currentPage > 0) goPage(currentPage - 1); };
   document.getElementById('pageBarNext').onclick = () => { if (currentPage < pages.length - 1) goPage(currentPage + 1); };
 
+  function loadDoc(id) {
+    const d = db.docs.find(x => x.id == id);
+    if (!d) return false;
+    allText = d.text;
+    currentDocId = d.id;
+    splitPages(allText);
+    restorePosition(d.id);
+    showCurrentPage();
+    renderPdfViewer();
+    upd();
+    return true;
+  }
+
   document.getElementById('bookmarkBtn').onclick = () => {
-    db.bookmarks.unshift({ id: Date.now(), page: currentPage + 1, t: (pages[currentPage]||'').slice(0,50) });
+    const snippet = (pages[currentPage] || '').slice(0, 50);
+    const defaultName = snippet.slice(0, 30).trim() || (t('page') + ' ' + (currentPage + 1));
+    const name = prompt(t('bookmarkNamePrompt'), defaultName);
+    if (name === null) return; // cancelled
+    db.bookmarks.unshift({
+      id: Date.now(),
+      page: currentPage + 1,
+      t: snippet,
+      name: name.trim() || defaultName,
+      docId: currentDocId
+    });
     saveDB();
     renderBm();
     toast('✓');
   };
+
+  function jumpToBookmark(b) {
+    if (b.docId && b.docId !== currentDocId) {
+      if (!loadDoc(b.docId)) { toast(t('bookmarkDocMissing')); return; }
+    }
+    goPage(Math.max(0, (b.page || 1) - 1));
+    document.getElementById('bookOverlay').style.display = 'none';
+  }
 
   // ——— Library with rename ———
   document.getElementById('saveBtn').onclick = () => {
@@ -1468,14 +1734,27 @@ body.immersion .controls {
 
   function renderBm() {
     const el = document.getElementById('bookmarks');
-    el.innerHTML = db.bookmarks.length ? db.bookmarks.map(b =>
-      `<div class="list-item"><div><b>${t('page')} ${b.page}</b> — ${escapeHtml(b.t)}…</div>
-       <button class="btn-sec" style="background:rgba(217,83,79,.15);color:var(--danger);border-color:var(--danger);flex:0" data-id="${b.id}">${t('delete')}</button></div>`
-    ).join('') : `<p style="color:var(--muted);font-size:12px">${t('empty')}</p>`;
+    el.innerHTML = db.bookmarks.length ? db.bookmarks.map(b => {
+      const doc = b.docId ? db.docs.find(d => d.id === b.docId) : null;
+      const docLabel = b.docId ? (doc ? escapeHtml(doc.title) : t('bookmarkDocMissing')) : '';
+      return `<div class="list-item">
+        <div data-jump="${b.id}" style="flex:1;min-width:0;cursor:pointer">
+          <b>${escapeHtml(b.name || (t('page') + ' ' + b.page))}</b><br>
+          <small style="color:var(--muted)">${docLabel ? docLabel + ' — ' : ''}${t('page')} ${b.page} — ${escapeHtml(b.t)}…</small>
+        </div>
+        <button class="btn-sec" style="background:rgba(217,83,79,.15);color:var(--danger);border-color:var(--danger);flex:0" data-id="${b.id}">${t('delete')}</button>
+      </div>`;
+    }).join('') : `<p style="color:var(--muted);font-size:12px">${t('empty')}</p>`;
     el.querySelectorAll('[data-id]').forEach(btn => {
       btn.onclick = () => {
         db.bookmarks = db.bookmarks.filter(b => b.id != btn.dataset.id);
         saveDB(); renderBm();
+      };
+    });
+    el.querySelectorAll('[data-jump]').forEach(divEl => {
+      divEl.onclick = () => {
+        const b = db.bookmarks.find(x => x.id == divEl.dataset.jump);
+        if (b) jumpToBookmark(b);
       };
     });
   }
@@ -1497,18 +1776,7 @@ body.immersion .controls {
     ).join('') : `<p style="color:var(--muted);font-size:12px">${t('empty')}</p>`;
 
     el.querySelectorAll('[data-load]').forEach(btn => {
-      btn.onclick = () => {
-        const d = db.docs.find(x => x.id == btn.dataset.load);
-        if (d) {
-          allText = d.text;
-          currentDocId = d.id;
-          splitPages(allText);
-          restorePosition(d.id);
-          showCurrentPage();
-          renderPdfViewer();
-          upd();
-        }
-      };
+      btn.onclick = () => { loadDoc(btn.dataset.load); };
     });
     el.querySelectorAll('[data-del]').forEach(btn => {
       btn.onclick = () => {
@@ -1544,6 +1812,7 @@ body.immersion .controls {
   populateVoiceSelect();
   applyAudioSettings();
   updateStorageUI();
+  setupMediaSession();
   showWelcomeIfNeeded();
 
   // Set default text
