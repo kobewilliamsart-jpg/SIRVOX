@@ -22,15 +22,6 @@
 <link rel="apple-touch-startup-image" href="splash/splash-1284x2778.png" media="(device-width: 428px) and (device-height: 926px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)">
 <link rel="apple-touch-startup-image" href="splash/splash-1290x2796.png" media="(device-width: 430px) and (device-height: 932px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)">
 <link rel="apple-touch-startup-image" href="splash/splash-1668x2388.png" media="(device-width: 834px) and (device-height: 1194px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)">
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
-<script>
-  if (typeof pdfjsLib !== 'undefined') {
-    pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js';
-  } else {
-    console.warn('pdf.js failed to load from CDN — PDF import will be unavailable until the network allows it.');
-  }
-</script>
 <style>
 :root {
   --bg: #f4f4f6;
@@ -75,8 +66,8 @@ label{font-size:10px;color:var(--muted);letter-spacing:.8px;display:block;margin
 .controls{display:flex;gap:8px;margin-top:10px}
 .progress{height:7px;background:var(--progress-bg);border-radius:4px;margin-top:10px;overflow:hidden}
 .progress div{height:100%;background:var(--accent-strong);width:0%;transition:width .25s linear}
-.lang-list{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}
-.lang-badge{font-size:12px;padding:7px 14px;border-radius:20px;background:var(--soft);border:1px solid var(--border);cursor:pointer;color:var(--muted);font-weight:600}
+.lang-list{display:flex;flex-wrap:nowrap;gap:4px;margin-top:6px}
+.lang-badge{font-size:11px;padding:6px 0;border-radius:10px;background:var(--soft);border:1px solid var(--border);cursor:pointer;color:var(--muted);font-weight:700;white-space:nowrap;flex:1;text-align:center}
 .lang-badge.active{background:var(--accent-strong);color:var(--accent-text);border-color:var(--accent-strong)}
 .pdf-viewer{max-height:120px;overflow:auto;background:var(--soft);border-radius:12px;border:1px solid var(--border);margin-top:8px;padding:6px;display:none}
 .pdf-viewer.show{display:block}
@@ -245,7 +236,6 @@ body.immersion .controls {
       </div>
 
       <input type="file" id="fileInput" accept=".txt,.docx,.doc,.pdf,text/plain,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/octet-stream" hidden>
-<audio id="keepAliveAudio" loop playsinline style="display:none"></audio>
       
       <div class="drop-zone" id="dropZone">
         <div id="dropText">📄 Glissez un fichier ici (TXT, DOCX, PDF)<br><small>ou cliquez sur OUVRIR • Max 10 Mo</small></div>
@@ -279,6 +269,17 @@ body.immersion .controls {
       <div style="display:flex;gap:6px;margin-top:8px;align-items:center">
         <input type="text" id="searchInput" placeholder="Rechercher…" style="display:none;flex:1">
         <button class="btn-sec" id="bookmarkBtn" style="flex:0 0 auto">＋ MARQUE-PAGE</button>
+      </div>
+
+      <div class="controls">
+        <button class="btn btn-play" id="playPauseBtn" style="flex:1">LIRE / PAUSE</button>
+        <button class="btn-sec" id="repeatBtn" style="flex:0 0 auto;padding:13px 16px" title="Répéter la dernière phrase">↺</button>
+        <button class="btn btn-stop" id="stopBtn" style="flex:1">ARRÊTER</button>
+      </div>
+      <div class="controls">
+        <button class="btn-sec" id="prevBtn">◀ PAGE</button>
+        <button class="btn-sec" id="nextBtn">PAGE ▶</button>
+        <button class="btn-sec" id="saveBtn">SAUVEGARDER</button>
       </div>
 
       <div class="progress"><div id="prog"></div></div>
@@ -318,18 +319,6 @@ body.immersion .controls {
   </div>
 
   <div>
-    <div class="card">
-      <div class="controls">
-        <button class="btn btn-play" id="playPauseBtn" style="flex:1">LIRE / PAUSE</button>
-        <button class="btn-sec" id="repeatBtn" style="flex:0 0 auto;padding:13px 16px" title="Répéter la dernière phrase">↺</button>
-        <button class="btn btn-stop" id="stopBtn" style="flex:1">ARRÊTER</button>
-      </div>
-      <div class="controls">
-        <button class="btn-sec" id="prevBtn">◀ PAGE</button>
-        <button class="btn-sec" id="nextBtn">PAGE ▶</button>
-        <button class="btn-sec" id="saveBtn">SAUVEGARDER</button>
-      </div>
-    </div>
     <div class="card" id="toolsCard">
       <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px">
         <button class="btn-sec" id="libBtn" style="flex:1"><span id="libBtnLabel"></span></button>
@@ -467,7 +456,13 @@ body.immersion .controls {
 
   const langs = [
     {code:'fr-FR', name:'Français'},
-    {code:'en-US', name:'English'}
+    {code:'en-US', name:'English'},
+    {code:'de-DE', name:'Deutsch'},
+    {code:'es-ES', name:'Español'},
+    {code:'pt-BR', name:'Português'},
+    {code:'ar-SA', name:'العربية'},
+    {code:'he-IL', name:'עברית'},
+    {code:'zh-CN', name:'中文'}
   ];
 
   const i18n = {
@@ -896,13 +891,14 @@ body.immersion .controls {
   // ——— Language & Voice ———
   function renderLangList() {
     document.getElementById('langList').innerHTML = langs.map(l =>
-      `<span class="lang-badge ${l.code===selectedLang?'active':''}" data-code="${l.code}">${l.name}</span>`
+      `<span class="lang-badge ${l.code===selectedLang?'active':''}" data-code="${l.code}" title="${escapeHtml(l.name)}">${l.code.slice(0,2).toUpperCase()}</span>`
     ).join('');
     document.querySelectorAll('.lang-badge').forEach(el => {
       el.onclick = () => {
         selectedLang = el.dataset.code;
         renderLangList();
         populateVoiceSelect();
+        toast(langs.find(l => l.code === selectedLang).name);
       };
     });
   }
@@ -969,10 +965,13 @@ body.immersion .controls {
       .trim();
 
     // Split on sentence endings but avoid splitting on common abbreviations.
+    // Includes Chinese/Japanese full-width punctuation (。！？) and the
+    // Arabic question mark (؟) so the new reading languages chunk sentences
+    // correctly too, not just Latin-script text.
     // IMPORTANT: any trailing text with no closing punctuation must still be
     // kept — a plain .match() would silently discard it, which was causing
     // whole words/phrases to disappear from imported documents.
-    const re = /[^.!?…]+[.!?…]+\s*/g;
+    const re = /[^.!?…。！？؟]+[.!?…。！？؟]+\s*/g;
     const result = [];
     let m, lastIndex = 0;
     while ((m = re.exec(cleaned)) !== null) {
@@ -999,7 +998,7 @@ body.immersion .controls {
   function isHeadingLike(paragraph) {
     if (paragraph.length > 80) return false;
     if (paragraph.includes('\n')) return false;
-    if (/[.!?…]\s*$/.test(paragraph)) return false;
+    if (/[.!?…。！？؟]\s*$/.test(paragraph)) return false;
     return true;
   }
 
@@ -1206,76 +1205,6 @@ body.immersion .controls {
     });
   }
 
-  // ——— Background playback: keep speech alive when the screen locks ———
-  // Mobile browsers aggressively suspend background tabs, including
-  // speechSynthesis. A silent looping <audio> element signals to the OS
-  // that "real" media is playing, which keeps Chrome/Safari from fully
-  // suspending the page — combined with the Media Session API below,
-  // this also gives us real lock-screen play/pause/skip controls.
-  const SILENT_WAV = 'data:audio/wav;base64,UklGRsQPAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YaAPAACAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICA';
-  const keepAliveAudio = document.getElementById('keepAliveAudio');
-  if (keepAliveAudio) keepAliveAudio.src = SILENT_WAV;
-
-  let wakeLockSentinel = null;
-  async function requestWakeLock() {
-    try {
-      if ('wakeLock' in navigator) wakeLockSentinel = await navigator.wakeLock.request('screen');
-    } catch (_) { /* not fatal — background playback still relies on the silent audio track */ }
-  }
-  function releaseWakeLock() {
-    try { wakeLockSentinel && wakeLockSentinel.release(); } catch (_) {}
-    wakeLockSentinel = null;
-  }
-
-  function startKeepAlive() {
-    if (keepAliveAudio) { keepAliveAudio.play().catch(() => {}); }
-    requestWakeLock();
-    if ('mediaSession' in navigator) navigator.mediaSession.playbackState = 'playing';
-  }
-  function pauseKeepAlive() {
-    if (keepAliveAudio) { try { keepAliveAudio.pause(); } catch (_) {} }
-    releaseWakeLock();
-    if ('mediaSession' in navigator) navigator.mediaSession.playbackState = 'paused';
-  }
-  function stopKeepAlive() {
-    if (keepAliveAudio) { try { keepAliveAudio.pause(); } catch (_) {} }
-    releaseWakeLock();
-    if ('mediaSession' in navigator) navigator.mediaSession.playbackState = 'none';
-  }
-
-  function updateMediaSessionMetadata() {
-    if (!('mediaSession' in navigator)) return;
-    const doc = currentDocId ? db.docs.find(d => d.id === currentDocId) : null;
-    try {
-      navigator.mediaSession.metadata = new MediaMetadata({
-        title: doc ? doc.title : 'SIRVOX',
-        artist: 'SIRVOX',
-        album: t('page') + ' ' + (currentPage + 1),
-        artwork: [
-          { src: 'icon-192.png', sizes: '192x192', type: 'image/png' },
-          { src: 'icon-512.png', sizes: '512x512', type: 'image/png' }
-        ]
-      });
-    } catch (_) {}
-  }
-
-  function setupMediaSession() {
-    if (!('mediaSession' in navigator)) return;
-    navigator.mediaSession.setActionHandler('play', () => { if (isPaused || !isPlaying) playPause(); });
-    navigator.mediaSession.setActionHandler('pause', () => { if (isPlaying && !isPaused) playPause(); });
-    navigator.mediaSession.setActionHandler('stop', () => stopSpeech(true));
-    navigator.mediaSession.setActionHandler('previoustrack', () => repeatLastSentence());
-    navigator.mediaSession.setActionHandler('nexttrack', () => {
-      if (!sentences.length) return;
-      synth.cancel();
-      sentenceIndex = Math.min(sentences.length - 1, sentenceIndex + 1);
-      isPlaying = true; isPaused = false;
-      document.body.classList.add('playing');
-      document.getElementById('playPauseBtn').textContent = t('pauseTxt');
-      startSentenceSpeech();
-    });
-  }
-
   // ——— Repeat last sentence (go back one sentence and re-speak it) ———
   function repeatLastSentence() {
     if (!sentences.length) return;
@@ -1285,7 +1214,6 @@ body.immersion .controls {
     isPaused = false;
     document.body.classList.add('playing');
     document.getElementById('playPauseBtn').textContent = t('pauseTxt');
-    startKeepAlive();
     startSentenceSpeech();
   }
   document.getElementById('repeatBtn').onclick = repeatLastSentence;
@@ -1323,7 +1251,6 @@ body.immersion .controls {
     document.body.classList.remove('playing');
     document.getElementById('playPauseBtn').textContent = t('play');
     prog.style.width = '0%';
-    stopKeepAlive();
     currentPage = i;
     sentenceIndex = 0;
     showCurrentPage();
@@ -1361,7 +1288,6 @@ body.immersion .controls {
         document.getElementById('playPauseBtn').textContent = t('play');
         highlightSentence(-1);
         prog.style.width = '100%';
-        stopKeepAlive();
         if (sleepTimerId) { clearTimeout(sleepTimerId); sleepTimerId = null; document.getElementById('sleepTimerSelect').value = '0'; }
         savePosition();
       }
@@ -1412,7 +1338,6 @@ body.immersion .controls {
     prog.style.width = '0%';
     document.getElementById('pctInfo').textContent = '0%';
     highlightSentence(-1);
-    stopKeepAlive();
     if (sleepTimerId) { clearTimeout(sleepTimerId); sleepTimerId = null; document.getElementById('sleepTimerSelect').value = '0'; }
     if (!keepPage) {
       sentenceIndex = 0;
@@ -1431,7 +1356,6 @@ body.immersion .controls {
       isPaused = true;
       isPlaying = false;
       btn.textContent = t('resumeTxt');
-      pauseKeepAlive();
       savePosition();
       return;
     }
@@ -1442,7 +1366,6 @@ body.immersion .controls {
       isPlaying = true;
       document.body.classList.add('playing');
       btn.textContent = t('pauseTxt');
-      startKeepAlive();
       startSentenceSpeech();
       return;
     }
@@ -1463,8 +1386,6 @@ body.immersion .controls {
     btn.textContent = t('pauseTxt');
     renderPdfViewer();
     updatePageBar();
-    updateMediaSessionMetadata();
-    startKeepAlive();
     startSentenceSpeech();
   }
 
@@ -1553,7 +1474,46 @@ body.immersion .controls {
   // across engines (notably WebKit/Safari on iPhone and some desktop
   // browsers) and can silently return zero paragraphs. Plain string/regex
   // parsing behaves identically on every platform.
+
+  // JSZip and pdf.js are loaded on demand (not as blocking <script> tags in
+  // <head>) so the app itself opens instantly and reliably offline — only
+  // DOCX/PDF import needs network, the first time it's used, same as the
+  // AI image-to-text tool already does with Tesseract.js.
+  let jszipLoadPromise = null;
+  function loadJSZip() {
+    if (window.JSZip) return Promise.resolve();
+    if (jszipLoadPromise) return jszipLoadPromise;
+    jszipLoadPromise = new Promise((resolve, reject) => {
+      const s = document.createElement('script');
+      s.src = 'https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js';
+      s.onload = resolve;
+      s.onerror = () => { jszipLoadPromise = null; reject(new Error('JSZip load failed')); };
+      document.head.appendChild(s);
+    });
+    return jszipLoadPromise;
+  }
+
+  let pdfJsLoadPromise = null;
+  function loadPdfJs() {
+    if (window.pdfjsLib) return Promise.resolve();
+    if (pdfJsLoadPromise) return pdfJsLoadPromise;
+    pdfJsLoadPromise = new Promise((resolve, reject) => {
+      const s = document.createElement('script');
+      s.src = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js';
+      s.onload = () => {
+        try {
+          pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js';
+        } catch (_) {}
+        resolve();
+      };
+      s.onerror = () => { pdfJsLoadPromise = null; reject(new Error('pdf.js load failed')); };
+      document.head.appendChild(s);
+    });
+    return pdfJsLoadPromise;
+  }
+
   async function extractDocx(file) {
+    await loadJSZip();
     const ab = await readAsArrayBuffer(file);
     const zip = await JSZip.loadAsync(ab);
     const xmlFile = zip.file('word/document.xml');
@@ -1577,7 +1537,9 @@ body.immersion .controls {
   }
 
   async function extractPdf(file) {
-    if (typeof pdfjsLib === 'undefined') {
+    try {
+      await loadPdfJs();
+    } catch (_) {
       throw new Error('pdf.js not loaded (blocked network or offline)');
     }
     // Extract text only – images are ignored (good for heavy image PDFs).
@@ -1812,7 +1774,6 @@ body.immersion .controls {
   populateVoiceSelect();
   applyAudioSettings();
   updateStorageUI();
-  setupMediaSession();
   showWelcomeIfNeeded();
 
   // Set default text
