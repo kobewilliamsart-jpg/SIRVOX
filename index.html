@@ -3,14 +3,25 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
-<title>SIRVOX V8.4 • Lecteur Pro</title>
+<title>SIRVOX V8.5 • Lecteur Pro</title>
 <link rel="manifest" href="manifest.json">
-<meta name="theme-color" content="#121214">
+<meta name="theme-color" content="#80f837">
 <link rel="icon" href="icon-192.png">
 <link rel="apple-touch-icon" href="icon-192.png">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="SIRVOX">
+
+<!-- Google Analytics (GA4) — REMPLACEZ G-XXXXXXXXXX par votre ID de mesure
+     (analytics.google.com > Admin > Flux de données > votre flux web).
+     Chargé en async : ne bloque jamais l'ouverture de l'app, même hors ligne. -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-XXXXXXXXXX"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){ dataLayer.push(arguments); }
+  gtag('js', new Date());
+  gtag('config', 'G-XXXXXXXXXX');
+</script>
 <link rel="apple-touch-startup-image" href="splash/splash-640x1136.png" media="(device-width: 320px) and (device-height: 568px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)">
 <link rel="apple-touch-startup-image" href="splash/splash-750x1334.png" media="(device-width: 375px) and (device-height: 667px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)">
 <link rel="apple-touch-startup-image" href="splash/splash-1242x2208.png" media="(device-width: 414px) and (device-height: 736px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)">
@@ -92,7 +103,7 @@ input[type=text],select{background:var(--soft);border:1px solid var(--border);bo
 .loading.show{display:block}
 .toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:#222;color:#fff;padding:12px 20px;border-radius:12px;font-size:13px;z-index:9999;opacity:0;transition:opacity .3s;pointer-events:none;max-width:90%}
 .toast.show{opacity:1}
-.header-btns{display:flex;gap:4px;flex-wrap:nowrap;flex-shrink:0;justify-content:flex-end;min-width:248px}
+.header-btns{display:flex;gap:4px;flex-wrap:nowrap;flex-shrink:0;justify-content:flex-end;min-width:286px}
 .voice-row{display:flex;gap:6px;margin-top:6px;flex-wrap:wrap}
 .voice-btn{font-size:12px;padding:8px 14px;border-radius:20px;background:var(--soft);border:1px solid var(--border);cursor:pointer;color:var(--muted);font-weight:600}
 .voice-btn.active{background:var(--accent-strong);color:var(--accent-text);border-color:var(--accent-strong)}
@@ -209,9 +220,10 @@ body.immersion .controls {
 <body>
 <div class="app" id="app">
   <header>
-    <div class="logo"><h1>SIR<span>VOX</span> <small style="font-size:11px;font-weight:500;opacity:.7">V8.4</small></h1></div>
+    <div class="logo"><h1>SIR<span>VOX</span> <small style="font-size:11px;font-weight:500;opacity:.7">V8.5</small></h1></div>
     <div class="header-btns">
       <button class="btn-sec" id="infoBtn" style="flex:0;padding:5px 7px;font-size:13px" title="Infos">ℹ️</button>
+      <button class="btn-sec" id="termsBtn" style="flex:0;padding:5px 7px;font-size:13px" title="Conditions d'utilisation">📜</button>
       <button class="btn-sec" id="immerseBtn" style="flex:0;padding:5px 7px;font-size:13px" title="Mode immersion">⛶</button>
       <button class="btn-sec" id="themeBtn" style="flex:0;padding:5px 7px;font-size:13px">🌙</button>
       <button class="btn-sec" id="layoutBtn" style="flex:0;padding:5px 6px;font-size:10px">BUREAU</button>
@@ -246,6 +258,7 @@ body.immersion .controls {
         <button class="btn-sec" id="pagesBtn">PAGES X-Y</button>
         <button class="btn-sec" id="searchBtn">RECHERCHER</button>
       </div>
+      <p id="usageReminder" style="font-size:10px;color:var(--muted);margin-top:6px;text-align:center;opacity:.75"></p>
 
       <div class="loading" id="loading">Chargement du document…</div>
 
@@ -396,6 +409,48 @@ body.immersion .controls {
   </div>
 </div>
 
+<!-- Legal consent gate — blocks the app until the user accepts -->
+<div class="welcome-overlay" id="legalGate" style="display:flex;z-index:99999">
+  <div class="welcome-box">
+    <div class="welcome-lang">
+      <button type="button" class="btn-sec" id="legalFrBtn">FR</button>
+      <button type="button" class="btn-sec" id="legalEnBtn">EN</button>
+    </div>
+    <h2 id="legalTitle"></h2>
+    <p id="legalP1" style="font-size:13px;line-height:1.6;color:var(--muted);margin-bottom:10px"></p>
+    <p id="legalP2Title" style="font-weight:700;margin-bottom:4px"></p>
+    <p id="legalP2" style="font-size:13px;line-height:1.6;color:var(--muted);margin-bottom:10px"></p>
+    <p id="legalP3" style="font-size:13px;line-height:1.6;color:var(--muted);margin-bottom:18px"></p>
+    <div style="display:flex;gap:8px">
+      <button type="button" class="btn-sec" id="legalDeclineBtn" style="flex:1"></button>
+      <button type="button" class="btn" id="legalAcceptBtn" style="flex:2;background:var(--accent-strong);color:var(--accent-text);font-weight:800;border:none;border-radius:12px;cursor:pointer;padding:13px 8px"></button>
+    </div>
+  </div>
+</div>
+
+<!-- Shown if the user declines — app stays blocked -->
+<div id="legalBlocked" style="display:none;position:fixed;inset:0;z-index:100000;background:var(--bg);color:var(--text);flex-direction:column;align-items:center;justify-content:center;padding:30px;text-align:center">
+  <div style="font-size:40px;margin-bottom:14px">🚫</div>
+  <h2 id="blockedTitle" style="margin-bottom:10px"></h2>
+  <p id="blockedText" style="font-size:14px;color:var(--muted);max-width:340px;margin-bottom:20px"></p>
+  <button type="button" class="btn-sec" id="legalReconsiderBtn" style="padding:12px 20px"></button>
+</div>
+
+<!-- Terms of use — viewable anytime, no accept/decline here -->
+<div class="welcome-overlay" id="termsOverlay" style="display:none">
+  <div class="welcome-box">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+      <h2 id="termsTitle" style="margin-bottom:0"></h2>
+      <button type="button" class="btn-sec" id="termsCloseBtn" style="flex:0;padding:6px 10px">✕</button>
+    </div>
+    <p id="termsP1" style="font-size:13px;line-height:1.6;color:var(--muted);margin-bottom:10px"></p>
+    <p id="termsP2Title" style="font-weight:700;margin-bottom:4px"></p>
+    <p id="termsP2" style="font-size:13px;line-height:1.6;color:var(--muted);margin-bottom:10px"></p>
+    <p id="termsP3" style="font-size:13px;line-height:1.6;color:var(--muted);margin-bottom:14px"></p>
+    <p id="termsAcceptedOn" style="font-size:12px;color:var(--muted);font-style:italic"></p>
+  </div>
+</div>
+
 <!-- Welcome Overlay -->
 <div class="welcome-overlay" id="welcomeOverlay" style="display:none">
   <div class="welcome-box">
@@ -481,7 +536,8 @@ body.immersion .controls {
       loading:"Extraction du texte…", tooBig:"Fichier trop volumineux (max 10 Mo).",
       errorRead:"Impossible de lire ce document.", saved:"Document sauvegardé", noText:"Aucun texte à lire.",
       male:"Homme", female:"Femme", storage:"Stockage", storageFull:"Stockage plein (25 Mo). Supprimez des documents.",
-      immerseOn:"Quitter immersion", immerseOff:"Mode immersion", infoBtn:"Infos",
+      immerseOn:"Quitter immersion", immerseOff:"Mode immersion", infoBtn:"Infos", termsBtn:"Conditions d'utilisation",
+      usageReminder:"⚠️ Usage personnel et non commercial uniquement — respectez les droits d'auteur.",
       autoVoice:"Automatique (voix système)", clearHistory:"EFFACER L'HISTORIQUE",
       aiBtn:"OUTILS IA — IMAGE VERS TEXTE", aiTitle:"OUTILS IA",
       aiInstructions:"Importez une capture d'écran, une photo ou une image contenant du texte. L'IA extrait automatiquement le texte pour vous, que vous pourrez ensuite modifier, renommer et enregistrer.",
@@ -516,7 +572,8 @@ body.immersion .controls {
       loading:"Extracting text…", tooBig:"File too large (max 10 MB).",
       errorRead:"Unable to read this document.", saved:"Document saved", noText:"No text to read.",
       male:"Male", female:"Female", storage:"Storage", storageFull:"Storage full (25 MB). Delete some documents.",
-      immerseOn:"Exit immersion", immerseOff:"Immersion mode", infoBtn:"Info",
+      immerseOn:"Exit immersion", immerseOff:"Immersion mode", infoBtn:"Info", termsBtn:"Terms of use",
+      usageReminder:"⚠️ Personal, non-commercial use only — please respect copyright.",
       autoVoice:"Automatic (system voice)", clearHistory:"CLEAR HISTORY",
       aiBtn:"AI TOOLS — IMAGE TO TEXT", aiTitle:"AI TOOLS",
       aiInstructions:"Upload a screenshot, photo, or image containing text. The AI automatically extracts the text for you, which you can then edit, rename and save.",
@@ -573,52 +630,158 @@ body.immersion .controls {
   const welcomeCopy = {
     fr: {
       title: "Bienvenue sur SIRVOX",
-      sub: "Lecteur de documents hors ligne avec synthèse vocale.",
-      howTitle: "Comment l’utiliser :",
+      sub: "Lecteur de documents hors ligne avec synthèse vocale, pensé pour étudier partout.",
+      howTitle: "Comment l'utiliser :",
       how: [
-        "Importez un fichier (TXT, DOCX ou PDF) ou collez directement votre texte.",
-        "Choisissez la langue (FR / EN) et, si besoin, une voix précise dans la liste.",
-        "Appuyez sur Lire pour démarrer la lecture.",
-        "Utilisez les boutons pour changer de page, mettre en pause ou ajouter un marque-page."
+        "Importez un fichier (TXT, DOCX ou PDF), collez votre texte, ou utilisez les outils IA pour extraire le texte d'une image.",
+        "Choisissez une des 8 langues de lecture et, si besoin, une voix précise parmi celles installées sur votre téléphone.",
+        "Appuyez sur Lire pour démarrer la lecture — la phrase en cours est surlignée automatiquement.",
+        "Utilisez ◀ PAGE / PAGE ▶ pour naviguer, ↺ pour répéter la dernière phrase, et + MARQUE-PAGE pour nommer un passage à retrouver plus tard.",
+        "Ouvrez Bibliothèque, Marques-pages ou Historique depuis les boutons dédiés pour retrouver vos documents.",
+        "Réglez une minuterie de sommeil pour que la lecture s'arrête automatiquement après X minutes."
       ],
       featTitle: "Fonctionnalités principales :",
       feat: [
-        "Lecture 100 % hors ligne",
-        "Surlignage de la phrase en cours",
-        "Bibliothèque pour sauvegarder vos documents",
-        "Mode immersion pour une lecture confortable",
-        "Réglages de vitesse, ton et volume",
-        "Outils IA : extraction de texte à partir d'une image"
+        "Lecture 100 % hors ligne, dans 8 langues (FR, EN, DE, ES, PT, AR, HE, ZH)",
+        "Surlignage de la phrase en cours, structure du texte préservée (titres, paragraphes)",
+        "Bibliothèque, marques-pages nommés (avec retour rapide à la page) et historique",
+        "Outils IA : extraction automatique de texte à partir d'une image ou capture d'écran",
+        "Minuterie de sommeil et bouton « Répéter la dernière phrase »",
+        "Mode immersion pour une lecture sans distraction",
+        "Réglages de vitesse, ton et volume, avec préréglages rapides",
+        "Installable sur l'écran d'accueil, fonctionne hors ligne une fois ouverte"
       ],
       noteTitle: "Important :",
       noteBody: "SIRVOX utilise par défaut la meilleure voix installée sur votre téléphone. Vous pouvez aussi choisir une voix précise dans la liste si votre appareil en propose plusieurs.",
       size: "Taille max par fichier : 10 Mo",
-      close: "J’ai compris"
+      close: "J'ai compris"
     },
     en: {
       title: "Welcome to SIRVOX",
-      sub: "Offline document reader with text-to-speech.",
+      sub: "Offline document reader with text-to-speech, built for studying anywhere.",
       howTitle: "How to use it:",
       how: [
-        "Import a file (TXT, DOCX or PDF) or paste your text directly.",
-        "Choose the language (FR / EN) and, if you want, a specific voice from the list.",
-        "Press Play to start reading.",
-        "Use the buttons to change page, pause, or add a bookmark."
+        "Import a file (TXT, DOCX or PDF), paste your text, or use the AI tools to extract text from an image.",
+        "Choose one of 8 reading languages and, if you want, a specific voice from those installed on your phone.",
+        "Press Play to start reading — the current sentence is highlighted automatically.",
+        "Use ◀ PAGE / PAGE ▶ to navigate, ↺ to repeat the last sentence, and + BOOKMARK to name a passage to find again later.",
+        "Open Library, Bookmarks or History from the dedicated buttons to find your documents.",
+        "Set a sleep timer so playback stops automatically after X minutes."
       ],
       featTitle: "Main features:",
       feat: [
-        "100% offline reading",
-        "Highlight of the current sentence",
-        "Library to save your documents",
-        "Immersion mode for comfortable reading",
-        "Speed, pitch and volume settings",
-        "AI tools: extract text from an image"
+        "100% offline reading, in 8 languages (FR, EN, DE, ES, PT, AR, HE, ZH)",
+        "Highlight of the current sentence, text structure preserved (headings, paragraphs)",
+        "Library, named bookmarks (with quick jump back to the page) and history",
+        "AI tools: automatic text extraction from an image or screenshot",
+        "Sleep timer and a \"Repeat last sentence\" button",
+        "Immersion mode for distraction-free reading",
+        "Speed, pitch and volume settings, with quick presets",
+        "Installable on your home screen, works offline once opened"
       ],
       noteTitle: "Important:",
       noteBody: "By default SIRVOX uses the best voice installed on your phone. You can also pick a specific voice from the list if your device offers several.",
       size: "Max file size: 10 MB",
       close: "Got it"
     }
+  };
+
+  const legalCopy = {
+    fr: {
+      title: "Avertissement légal et conditions d'utilisation",
+      p1: "L'application SIRVOX a été développée exclusivement dans un but éducatif et pédagogique, conçue pour servir de support d'étude et d'aide à la lecture hors ligne.",
+      p2Title: "Mise en garde contre la contrefaçon et le respect des droits d'auteur :",
+      p2: "L'utilisation de cette application pour extraire, copier ou diffuser des extraits de livres, de manuels ou de documents protégés à des fins commerciales, lucratives ou sans l'autorisation expresse des auteurs et des éditeurs est formellement interdite.",
+      p3: "Chaque utilisateur est seul responsable du contenu qu'il importe et lit via l'application. Le non-respect des droits de propriété intellectuelle expose les contrevenants aux sanctions pénales et civiles prévues par la loi en matière de contrefaçon.",
+      decline: "Refuser",
+      accept: "J'accepte d'importer des documents à des fins personnelles et à but non lucratif",
+      blockedTitle: "Accès refusé",
+      blockedText: "SIRVOX ne peut pas être utilisé sans accepter les conditions d'utilisation.",
+      reconsider: "Revoir les conditions",
+      close: "Fermer",
+      acceptedOn: "Accepté le "
+    },
+    en: {
+      title: "Legal Notice and Terms of Use",
+      p1: "The SIRVOX application was developed exclusively for educational and pedagogical purposes, designed to serve as a study aid and offline reading support.",
+      p2Title: "Warning regarding copyright infringement and respect for copyright:",
+      p2: "Using this application to extract, copy, or distribute excerpts from books, textbooks, or protected documents for commercial or profit-making purposes, or without the express authorization of the authors and publishers, is strictly prohibited.",
+      p3: "Each user is solely responsible for the content they import and read via the application. Failure to respect intellectual property rights exposes offenders to the criminal and civil penalties provided by law regarding copyright infringement.",
+      decline: "Decline",
+      accept: "I agree to import documents for personal, non-commercial use only",
+      blockedTitle: "Access denied",
+      blockedText: "SIRVOX cannot be used without accepting the terms of use.",
+      reconsider: "Review the terms",
+      close: "Close",
+      acceptedOn: "Accepted on "
+    }
+  };
+
+  let legalGateLang = 'fr';
+  function renderLegalGate(lang) {
+    legalGateLang = lang;
+    const l = legalCopy[lang];
+    document.getElementById('legalTitle').textContent = l.title;
+    document.getElementById('legalP1').textContent = l.p1;
+    document.getElementById('legalP2Title').textContent = l.p2Title;
+    document.getElementById('legalP2').textContent = l.p2;
+    document.getElementById('legalP3').textContent = l.p3;
+    document.getElementById('legalDeclineBtn').textContent = l.decline;
+    document.getElementById('legalAcceptBtn').textContent = l.accept;
+    const frBtn = document.getElementById('legalFrBtn');
+    const enBtn = document.getElementById('legalEnBtn');
+    if (lang === 'fr') {
+      frBtn.style.background = 'var(--accent-strong)'; frBtn.style.color = 'var(--accent-text)';
+      enBtn.style.background = 'var(--soft)'; enBtn.style.color = 'var(--text)';
+    } else {
+      enBtn.style.background = 'var(--accent-strong)'; enBtn.style.color = 'var(--accent-text)';
+      frBtn.style.background = 'var(--soft)'; frBtn.style.color = 'var(--text)';
+    }
+  }
+  document.getElementById('legalFrBtn').onclick = () => renderLegalGate('fr');
+  document.getElementById('legalEnBtn').onclick = () => renderLegalGate('en');
+
+  function renderTerms(lang) {
+    const l = legalCopy[lang];
+    document.getElementById('termsTitle').textContent = l.title;
+    document.getElementById('termsP1').textContent = l.p1;
+    document.getElementById('termsP2Title').textContent = l.p2Title;
+    document.getElementById('termsP2').textContent = l.p2;
+    document.getElementById('termsP3').textContent = l.p3;
+    document.getElementById('termsCloseBtn').textContent = l.close;
+    document.getElementById('termsAcceptedOn').textContent =
+      (db.legalAccepted && db.legalAccepted.date) ? l.acceptedOn + db.legalAccepted.date : '';
+  }
+  document.getElementById('termsBtn').onclick = () => {
+    renderTerms(uiLang === 'en' ? 'en' : 'fr');
+    document.getElementById('termsOverlay').style.display = 'flex';
+  };
+  document.getElementById('termsCloseBtn').onclick = () => {
+    document.getElementById('termsOverlay').style.display = 'none';
+  };
+
+  document.getElementById('legalAcceptBtn').onclick = () => {
+    db.legalAccepted = {
+      accepted: true,
+      date: new Date().toLocaleDateString(legalGateLang === 'fr' ? 'fr-FR' : 'en-US'),
+      version: '8.5'
+    };
+    saveDB();
+    document.getElementById('legalGate').style.display = 'none';
+    if (legalGateLang !== uiLang) setUILang(legalGateLang);
+    showWelcomeIfNeeded();
+    if (typeof gtag === 'function') gtag('event', 'terms_accepted', { event_category: 'engagement' });
+  };
+  document.getElementById('legalDeclineBtn').onclick = () => {
+    document.getElementById('legalGate').style.display = 'none';
+    document.getElementById('blockedTitle').textContent = legalCopy[legalGateLang].blockedTitle;
+    document.getElementById('blockedText').textContent = legalCopy[legalGateLang].blockedText;
+    document.getElementById('legalReconsiderBtn').textContent = legalCopy[legalGateLang].reconsider;
+    document.getElementById('legalBlocked').style.display = 'flex';
+  };
+  document.getElementById('legalReconsiderBtn').onclick = () => {
+    document.getElementById('legalBlocked').style.display = 'none';
+    document.getElementById('legalGate').style.display = 'flex';
   };
 
   let welcomeLang = 'fr';
@@ -797,6 +960,9 @@ body.immersion .controls {
     document.getElementById('installBanner').style.display = 'none';
     db.installDismissed = true;
     saveDB();
+    if (typeof gtag === 'function') {
+      gtag('event', 'pwa_install', { event_category: 'engagement', event_label: 'SIRVOX PWA installed' });
+    }
   });
 
   if (isIOS() && !isStandaloneMode() && !db.installDismissed) {
@@ -850,6 +1016,8 @@ body.immersion .controls {
     document.getElementById('loading').textContent = tr.loading;
     document.getElementById('immerseBtn').title = document.body.classList.contains('immersion') ? tr.immerseOn : tr.immerseOff;
     document.getElementById('infoBtn').title = tr.infoBtn;
+    document.getElementById('termsBtn').title = tr.termsBtn;
+    document.getElementById('usageReminder').textContent = tr.usageReminder;
 
     const td = document.getElementById('textDisplay');
     if (!allText.trim()) td.innerText = tr.defaultText;
@@ -1774,7 +1942,13 @@ body.immersion .controls {
   populateVoiceSelect();
   applyAudioSettings();
   updateStorageUI();
-  showWelcomeIfNeeded();
+  renderLegalGate('fr');
+  if (db.legalAccepted && db.legalAccepted.accepted) {
+    document.getElementById('legalGate').style.display = 'none';
+    showWelcomeIfNeeded();
+  }
+  // If not yet accepted, the legal gate stays visible (its HTML default) and
+  // showWelcomeIfNeeded() is triggered from the Accept button instead.
 
   // Set default text
   if (!allText) textDisplay.innerText = i18n.fr.defaultText;

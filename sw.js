@@ -1,4 +1,4 @@
-const CACHE_NAME = 'sirvox-v3';
+const CACHE_NAME = 'sirvox-v4';
 // Keep this list small and essential: cache.addAll() is all-or-nothing, and a
 // large first-install batch (e.g. splash screens) can fail or stall entirely
 // on a slow/flaky first connection, leaving nothing cached — which is exactly
