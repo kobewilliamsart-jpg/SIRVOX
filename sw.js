@@ -1,49 +1,73 @@
-const CACHE_NAME = 'sirvox-v4';
-// Keep this list small and essential: cache.addAll() is all-or-nothing, and a
-// large first-install batch (e.g. splash screens) can fail or stall entirely
-// on a slow/flaky first connection, leaving nothing cached — which is exactly
-// what makes a PWA unable to open offline afterwards. Non-essential assets
-// (splash images, etc.) get cached opportunistically by the fetch handler
-// below the first time they're actually requested, same end result, no risk
-// to the critical first install.
-const APP_SHELL = ['./', './index.html', './manifest.json', './icon-192.png', './icon-512.png'];
+const CACHE = 'sirvox-8.7-shell-v1';
+const SHELL = [
+  './', './index.html', './manifest.json', './lib/jszip.min.js',
+  './icons/icon-192.png', './icons/icon-512.png'
+];
+const CDN = [
+  'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js',
+  'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js',
+  'https://cdn.jsdelivr.net/npm/tesseract.js@4.1.1/dist/tesseract.min.js'
+];
 
 self.addEventListener('install', event => {
-  event.waitUntil(
-    caches.open(CACHE_NAME).then(cache =>
-      // Cache each file independently (not cache.addAll, which is all-or-
-      // nothing) so one bad/slow request can never sink the whole install
-      // and leave the app with zero offline caching.
-      Promise.allSettled(APP_SHELL.map(url => cache.add(url)))
-    )
-  );
-  self.skipWaiting();
+  event.waitUntil((async () => {
+    const cache = await caches.open(CACHE);
+    await cache.addAll(SHELL);
+    await Promise.all(CDN.map(async url => {
+      try {
+        const res = await fetch(url, {cache:'no-cache'});
+        if (res.ok) await cache.put(url, res.clone());
+      } catch (_) {}
+    }));
+    self.skipWaiting();
+  })());
 });
 
 self.addEventListener('activate', event => {
-  event.waitUntil(
-    caches.keys().then(keys =>
-      Promise.all(keys.filter(k => k !== CACHE_NAME).map(k => caches.delete(k)))
-    )
-  );
-  self.clients.claim();
+  event.waitUntil((async () => {
+    const keys = await caches.keys();
+    await Promise.all(keys.filter(k => k !== CACHE).map(k => caches.delete(k)));
+    await self.clients.claim();
+  })());
 });
 
 self.addEventListener('fetch', event => {
-  if (event.request.method !== 'GET') return;
-  const url = new URL(event.request.url);
-  // Only manage the app shell (same-origin). CDN libraries (JSZip, pdf.js,
-  // Tesseract.js) are left to the network/browser's own caching as usual.
-  if (url.origin !== self.location.origin) return;
+  const req = event.request;
+  const url = new URL(req.url);
 
-  event.respondWith(
-    caches.match(event.request).then(cached => {
-      const network = fetch(event.request).then(response => {
-        const copy = response.clone();
-        caches.open(CACHE_NAME).then(cache => cache.put(event.request, copy));
-        return response;
-      }).catch(() => cached);
-      return cached || network;
-    })
-  );
+  // App shell: cache-first.
+  if (url.origin === location.origin) {
+    event.respondWith((async () => {
+      const cached = await caches.match(req);
+      if (cached) return cached;
+      try {
+        const res = await fetch(req);
+        const cache = await caches.open(CACHE);
+        if (res.ok && req.method === 'GET') cache.put(req, res.clone());
+        return res;
+      } catch (_) {
+        return caches.match('./index.html');
+      }
+    })());
+    return;
+  }
+
+  // CDN dependencies: network-first, then cached copy. Successful first use
+  // becomes available offline afterwards.
+  if (url.hostname === 'cdnjs.cloudflare.com' || url.hostname === 'cdn.jsdelivr.net') {
+    event.respondWith((async () => {
+      try {
+        const res = await fetch(req);
+        if (res.ok) {
+          const cache = await caches.open(CACHE);
+          cache.put(req, res.clone());
+        }
+        return res;
+      } catch (_) {
+        const cached = await caches.match(req);
+        if (cached) return cached;
+        throw _;
+      }
+    })());
+  }
 });
