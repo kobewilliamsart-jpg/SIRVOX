@@ -1,6 +1,9 @@
-/* SIRVOX service worker — fonctionne hors ligne une fois installé.
-   Pour publier une mise à jour : changez CACHE_VERSION. */
-const CACHE_VERSION = 'sirvox-v8.7.0';
+/* SIRVOX service worker — hors ligne + mises à jour contrôlées.
+   La version vient de l'URL d'enregistrement (sw.js?v=APP_VERSION) : il suffit de changer
+   APP_VERSION dans index.html. À l'activation, les anciens caches sont supprimés.
+   Les documents de l'utilisateur (localStorage) ne sont JAMAIS touchés. */
+const VERSION = new URL(self.location.href).searchParams.get('v') || 'dev';
+const CACHE_VERSION = 'sirvox-' + VERSION;
 const CORE = [
   './',
   './index.html',
@@ -12,20 +15,16 @@ const CORE = [
   './icons/apple-touch-icon.png',
   './icons/favicon-32.png'
 ];
-// Optionnels : ignorés sans erreur s'ils sont absents du dossier.
-const OPTIONAL = [
-  './lib/pdf.min.js',
-  './lib/pdf.worker.min.js',
-  './lib/tesseract.min.js'
-];
+// Optionnels : ignorés sans erreur s'ils sont absents.
+const OPTIONAL = ['./lib/pdf.min.js', './lib/pdf.worker.min.js', './lib/tesseract.min.js'];
 const CDN_HOSTS = ['cdnjs.cloudflare.com', 'cdn.jsdelivr.net'];
 
 self.addEventListener('install', (event) => {
+  // Pas de skipWaiting ici : la nouvelle version attend que l'utilisateur appuie sur « Mettre à jour ».
   event.waitUntil((async () => {
     const cache = await caches.open(CACHE_VERSION);
-    await cache.addAll(CORE);
+    await Promise.all(CORE.map((u) => cache.add(new Request(u, { cache: 'reload' }))));
     await Promise.allSettled(OPTIONAL.map((u) => cache.add(u)));
-    await self.skipWaiting();
   })());
 });
 
@@ -45,14 +44,17 @@ self.addEventListener('fetch', (event) => {
   const req = event.request;
   if (req.method !== 'GET') return;
   const url = new URL(req.url);
+  if (url.searchParams.has('vcheck')) return; // vérification de version : toujours le réseau
 
-  // Pages : réseau d'abord (mises à jour), cache en secours (hors ligne).
+  // Pages : réseau d'abord (toujours la dernière version en ligne), cache en secours hors ligne.
   if (req.mode === 'navigate') {
     event.respondWith((async () => {
       try {
         const fresh = await fetch(req);
-        const cache = await caches.open(CACHE_VERSION);
-        cache.put('./index.html', fresh.clone());
+        if (fresh && fresh.ok) {
+          const cache = await caches.open(CACHE_VERSION);
+          cache.put('./index.html', fresh.clone());
+        }
         return fresh;
       } catch (_) {
         return (await caches.match('./index.html')) || (await caches.match('./'));
@@ -65,7 +67,6 @@ self.addEventListener('fetch', (event) => {
   const cdn = CDN_HOSTS.includes(url.hostname);
   if (!sameOrigin && !cdn) return; // Google Analytics etc. : jamais interceptés
 
-  // Ressources statiques : cache d'abord, puis réseau (et mise en cache).
   event.respondWith((async () => {
     const cached = await caches.match(req, { ignoreSearch: sameOrigin });
     if (cached) return cached;
@@ -77,7 +78,7 @@ self.addEventListener('fetch', (event) => {
       }
       return res;
     } catch (err) {
-      return cached || Response.error();
+      return Response.error();
     }
   })());
 });
