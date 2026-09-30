@@ -14,7 +14,7 @@ Application web progressive (PWA) : un seul dossier statique, installable sur t�
 ### Lecture & import
 - **Lecture texte-vers-parole** avec surlignage de la phrase en cours, en respectant la structure du document (titres, paragraphes séparés — plus de texte "en bloc").
 - **Import de fichiers** : `.txt`, `.docx`, `.pdf` — glisser-déposer ou sélection manuelle.
-- **8 langues de lecture** : Français, English, Deutsch, Español, Português, العربية, עברית, 中文.
+- **5 langues de lecture** : Français, English, Deutsch, Español, Português.
 - **Voix système réelles** : SIRVOX liste les voix réellement installées sur votre téléphone et vous laisse choisir, au lieu d'un simple réglage Homme/Femme.
 - **Réglages audio** : vitesse, ton, volume, + préréglages rapides (Normal / Rapide / Cinéma).
 
