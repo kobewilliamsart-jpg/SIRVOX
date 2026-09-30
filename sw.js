@@ -1,4 +1,4 @@
-const CACHE = 'sirvox-8.7-shell-v1';
+const CACHE = 'sirvox-8.7-shell-v2';
 const SHELL = [
   './', './index.html', './manifest.json', './lib/jszip.min.js',
   './icons/icon-192.png', './icons/icon-512.png'
