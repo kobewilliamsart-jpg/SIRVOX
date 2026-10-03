@@ -1,84 +1,56 @@
-/* SIRVOX service worker — hors ligne + mises à jour contrôlées.
-   La version vient de l'URL d'enregistrement (sw.js?v=APP_VERSION) : il suffit de changer
-   APP_VERSION dans index.html. À l'activation, les anciens caches sont supprimés.
-   Les documents de l'utilisateur (localStorage) ne sont JAMAIS touchés. */
-const VERSION = new URL(self.location.href).searchParams.get('v') || 'dev';
-const CACHE_VERSION = 'sirvox-' + VERSION;
+/* SIRVOX service worker — le cache change à chaque version (index.html enregistre sw.js?v=APP_VERSION) */
+const VERSION = new URL(self.location.href).searchParams.get('v') || '8.8';
+const CACHE = 'sirvox-' + VERSION;
 const CORE = [
-  './',
-  './index.html',
-  './manifest.json',
-  './icons/icon-192.png',
-  './icons/icon-512.png',
-  './icons/maskable-192.png',
-  './icons/maskable-512.png',
-  './icons/apple-touch-icon.png',
-  './icons/favicon-32.png'
+  './', './index.html', './manifest.json',
+  './icons/icon-192.png', './icons/icon-512.png', './icons/icon-512-maskable.png', './icons/apple-touch-icon.png', './icons/favicon-32.png',
+  './lib/pdf.min.js', './lib/pdf.worker.min.js', './lib/tesseract.min.js'
 ];
-// Optionnels : ignorés sans erreur s'ils sont absents.
-const OPTIONAL = ['./lib/pdf.min.js', './lib/pdf.worker.min.js', './lib/tesseract.min.js'];
-const CDN_HOSTS = ['cdnjs.cloudflare.com', 'cdn.jsdelivr.net'];
+// Bibliothèques téléchargées une fois (PDF.js / Tesseract + langues) puis gardées pour le hors-ligne.
+// Google Analytics n'est volontairement jamais mis en cache.
+const RUNTIME_HOSTS = ['cdn.jsdelivr.net', 'cdnjs.cloudflare.com', 'unpkg.com', 'tessdata.projectnaptha.com'];
 
-self.addEventListener('install', (event) => {
-  // Pas de skipWaiting ici : la nouvelle version attend que l'utilisateur appuie sur « Mettre à jour ».
-  event.waitUntil((async () => {
-    const cache = await caches.open(CACHE_VERSION);
-    await Promise.all(CORE.map((u) => cache.add(new Request(u, { cache: 'reload' }))));
-    await Promise.allSettled(OPTIONAL.map((u) => cache.add(u)));
-  })());
+self.addEventListener('install', e => {
+  // un fichier manquant ne doit jamais bloquer l'installation
+  e.waitUntil(caches.open(CACHE).then(c => Promise.all(CORE.map(u => c.add(new Request(u, { cache: 'reload' })).catch(() => {})))));
 });
 
-self.addEventListener('activate', (event) => {
-  event.waitUntil((async () => {
+self.addEventListener('message', e => { if (e.data === 'SKIP_WAITING') self.skipWaiting(); });
+
+self.addEventListener('activate', e => {
+  e.waitUntil((async () => {
     const keys = await caches.keys();
-    await Promise.all(keys.filter((k) => k !== CACHE_VERSION).map((k) => caches.delete(k)));
+    await Promise.all(keys.filter(k => k.startsWith('sirvox-') && k !== CACHE).map(k => caches.delete(k)));
     await self.clients.claim();
   })());
 });
 
-self.addEventListener('message', (event) => {
-  if (event.data === 'SKIP_WAITING') self.skipWaiting();
-});
+async function networkFirst(req) {
+  const cache = await caches.open(CACHE);
+  try {
+    const res = await fetch(req);
+    if (res && res.ok && !new URL(req.url).searchParams.has('vcheck')) cache.put(req, res.clone());
+    return res;
+  } catch (err) {
+    return (await cache.match(req, { ignoreSearch: true })) || (await cache.match('./index.html')) || (await cache.match('./')) || Response.error();
+  }
+}
 
-self.addEventListener('fetch', (event) => {
-  const req = event.request;
+async function cacheFirst(req) {
+  const cache = await caches.open(CACHE);
+  const hit = await cache.match(req);
+  if (hit) return hit;
+  const res = await fetch(req);
+  if (res && (res.ok || res.type === 'opaque')) cache.put(req, res.clone());
+  return res;
+}
+
+self.addEventListener('fetch', e => {
+  const req = e.request;
   if (req.method !== 'GET') return;
   const url = new URL(req.url);
-  if (url.searchParams.has('vcheck')) return; // vérification de version : toujours le réseau
-
-  // Pages : réseau d'abord (toujours la dernière version en ligne), cache en secours hors ligne.
-  if (req.mode === 'navigate') {
-    event.respondWith((async () => {
-      try {
-        const fresh = await fetch(req);
-        if (fresh && fresh.ok) {
-          const cache = await caches.open(CACHE_VERSION);
-          cache.put('./index.html', fresh.clone());
-        }
-        return fresh;
-      } catch (_) {
-        return (await caches.match('./index.html')) || (await caches.match('./'));
-      }
-    })());
-    return;
-  }
-
-  const sameOrigin = url.origin === self.location.origin;
-  const cdn = CDN_HOSTS.includes(url.hostname);
-  if (!sameOrigin && !cdn) return; // Google Analytics etc. : jamais interceptés
-
-  event.respondWith((async () => {
-    const cached = await caches.match(req, { ignoreSearch: sameOrigin });
-    if (cached) return cached;
-    try {
-      const res = await fetch(req);
-      if (res && (res.ok || res.type === 'opaque')) {
-        const cache = await caches.open(CACHE_VERSION);
-        cache.put(req, res.clone());
-      }
-      return res;
-    } catch (err) {
-      return Response.error();
-    }
-  })());
+  const same = url.origin === self.location.origin;
+  if (!same && RUNTIME_HOSTS.indexOf(url.hostname) === -1) return;
+  if (req.mode === 'navigate' || (same && /(\/|index\.html)$/.test(url.pathname))) { e.respondWith(networkFirst(req)); return; }
+  e.respondWith(cacheFirst(req));
 });

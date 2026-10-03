@@ -1,53 +1,31 @@
 # SIRVOX 🎧
 
 **Lecteur de texte à voix haute, pensé pour les étudiants.**
-Importez vos cours, laissez SIRVOX les lire à voix haute, où que vous soyez — même sans connexion internet.
+Importez vos cours et écoutez-les où que vous soyez, même sans connexion. Application web progressive (PWA) : un dossier statique, installable sur téléphone sans App Store ni Play Store.
 
-Application web progressive (PWA) : un seul dossier statique, installable sur téléphone comme une vraie app, sans passer par l'App Store ou le Play Store.
+**Version actuelle : 8.8**
 
-**Version actuelle : 8.5**
+### Nouveautés 8.8
+- **Import DOCX / PDF fidèle** : titres, chapitres et paragraphes conservés (en-têtes, pieds de page et numéros de page retirés du PDF). Chaque chapitre démarre sur une nouvelle page.
+- **Outil IA façon Google Lens** : l'image s'affiche avec les lignes de texte surlignées ; touchez pour sélectionner, puis copiez ou insérez dans le document.
+- **Installation PWA corrigée** : bannière à chaque visite tant que l'app n'est pas installée, et bouton 📲 permanent dans l'en-tête.
+- **Conditions d'utilisation** redemandées à chaque mise à jour **et** à chaque nouvelle installation.
+- Voix de/es/pt mieux choisies (langue exacte, voix hors ligne en priorité) ; lecture « répéter » fiabilisée.
+- Sauvegarde sécurisée (plus de faux « sauvegardé » si le stockage est plein), reprise de lecture corrigée, fichiers `.doc` refusés avec un message clair.
+- Nouveau logo.
 
 ---
 
 ## ✨ Fonctionnalités
 
-### Lecture & import
-- **Lecture texte-vers-parole** avec surlignage de la phrase en cours, en respectant la structure du document (titres, paragraphes séparés — plus de texte "en bloc").
-- **Import de fichiers** : `.txt`, `.docx`, `.pdf` — glisser-déposer ou sélection manuelle.
-- **5 langues de lecture** : Français, English, Deutsch, Español, Português.
-- **Voix système réelles** : SIRVOX liste les voix réellement installées sur votre téléphone et vous laisse choisir, au lieu d'un simple réglage Homme/Femme.
-- **Réglages audio** : vitesse, ton, volume, + préréglages rapides (Normal / Rapide / Cinéma).
-
-### Outils IA (extraction de texte depuis une image)
-- Importez une capture d'écran, une photo ou une image contenant du texte.
-- L'IA (Tesseract.js, reconnaissance FR + EN combinée) extrait le texte automatiquement.
-- **La photo n'est jamais conservée** — seul le texte extrait est gardé, éditable avant sauvegarde.
-- Nécessite une connexion internet la première utilisation (téléchargement du modèle de reconnaissance).
-
-### Organisation
-- **Bibliothèque** de documents sauvegardés, renommables.
-- **Marques-pages nommés** : donnez un nom à un marque-page ("Formules d'examen", "À réviser") et retrouvez la page d'un simple tap, même si c'est un autre document de la bibliothèque.
-- **Historique** de lecture, effaçable en un tap.
-- Bibliothèque / Marques-pages / Historique / Outils IA s'ouvrent en pop-up, pour ne pas encombrer l'écran.
-
-### Confort de lecture
-- **Minuterie de sommeil** (10 à 60 min) : arrête automatiquement la lecture, idéal pour réviser en s'endormant.
-- **Bouton "Répéter"** : revient à la phrase précédente en un tap, sans avoir à rejouer toute la page.
-- **Mode immersion** : masque les contrôles secondaires pour une lecture sans distraction.
-- **Mode Bureau / Mobile** : adapte la mise en page à l'écran.
-- Thème clair / sombre, taille de police ajustable.
-
-### Application installable (PWA)
-- Fonctionne **100 % hors ligne** une fois ouverte une première fois (lecture, bibliothèque, marques-pages, voix).
-- Installable sur l'écran d'accueil (Android et iPhone) avec icône et écran de démarrage dédiés.
-- Bannière d'installation personnalisée sur Android ; instructions claires sur iPhone (Safari ne permet pas l'installation automatique).
-- **Suivi des installations** : un événement personnalisé (`pwa_install`) est envoyé à Google Analytics dès que l'app est installée (voir la section Analytics ci-dessous pour l'activer).
-
-### Conformité & mentions légales (nouveau en 8.5)
-- **Écran de consentement obligatoire** au premier lancement : l'utilisateur doit accepter les conditions d'utilisation (usage personnel et non commercial, respect du droit d'auteur) avant de pouvoir utiliser l'app. En cas de refus, l'application reste bloquée.
-- Écran de consentement disponible en **FR/EN**, avec bouton "J'accepte" mis en évidence.
-- **Bouton "Conditions d'utilisation"** dans l'en-tête (à côté d'Infos) : permet de relire les conditions à tout moment, avec la date d'acceptation affichée.
-- **Rappel discret et permanent** sous les boutons d'import : "Usage personnel et non commercial uniquement".
+- **Lecture vocale** avec surlignage de la phrase en cours, en 5 langues : Français, English, Deutsch, Español, Português. Choix de la voix système, vitesse / ton / volume, préréglages Normal / Rapide / Cinéma.
+- **Import** `.txt`, `.docx`, `.pdf` (max 10 Mo), glisser-déposer ou sélection.
+- **Outils IA** : extraction de texte depuis une image (Tesseract.js, FR + EN). La photo n'est jamais conservée, seul le texte l'est.
+- **Organisation** : bibliothèque renommable, marques-pages nommés, historique.
+- **Confort** : minuterie de sommeil, bouton « Répéter », mode immersion, Bureau / Mobile, thème clair / sombre, taille de police.
+- **PWA** : 100 % hors ligne après la première ouverture, installable (Android et iPhone), écrans de démarrage iOS.
+- **Conformité** : écran de consentement obligatoire (FR/EN), conditions consultables via 📜, rappel « usage personnel et non commercial ».
+- **Suivi** : Google Analytics 4 (installations, mises à jour), chargé seulement après acceptation des conditions.
 
 ---
 
@@ -55,69 +33,39 @@ Application web progressive (PWA) : un seul dossier statique, installable sur t�
 
 ```
 sirvox-pwa/
-├── index.html          # L'application (tout le code : HTML, CSS, JS)
-├── manifest.json        # Métadonnées PWA (nom, icônes, couleurs)
-├── sw.js                 # Service worker — mise en cache hors-ligne
-├── icon-192.png          # Icône de l'app (192×192)
-├── icon-512.png          # Icône de l'app (512×512)
-├── splash/                # Écrans de démarrage iOS (11 tailles d'iPhone/iPad)
-│   └── splash-*.png
+├── index.html        # Toute l'application (HTML, CSS, JS, JSZip)
+├── manifest.json     # Métadonnées PWA
+├── sw.js             # Service worker (cache hors ligne)
+├── icons/            # icon-192, icon-512, icon-512-maskable, apple-touch-icon, favicon-32
+├── splash/           # Écrans de démarrage iOS (11 tailles)
+├── lib/              # pdf.min.js, pdf.worker.min.js, tesseract.min.js
 └── README.md
 ```
 
-⚠️ **Ne pas séparer ces fichiers** — `index.html` référence `manifest.json`, `sw.js`, les icônes et le dossier `splash/` par chemin relatif. Le dossier `splash/` est utilisé uniquement sur iPhone/iPad (Android génère son propre écran de démarrage à partir du manifest) ; l'inclure ne coûte rien et évite un flash blanc au lancement sur iOS.
+⚠️ Ne pas séparer ces fichiers : `index.html` les référence par chemin relatif.
 
 ---
 
-## 📊 Activer Google Analytics (suivi des installations)
+## 🚀 Déploiement et mises à jour
 
-Le code de suivi est déjà en place dans `index.html`, mais utilise un identifiant provisoire. Pour l'activer :
+SIRVOX est 100 % statique. Hébergez le dossier en **HTTPS** (obligatoire pour l'installation et le hors ligne) : Netlify Drop, GitHub Pages, Vercel ou Cloudflare Pages.
 
-1. Créez une propriété GA4 sur [analytics.google.com](https://analytics.google.com) (Admin → Créer une propriété → Flux de données web).
-2. Copiez votre **ID de mesure** (format `G-XXXXXXXXXX`).
-3. Dans `index.html`, remplacez les **deux occurrences** de `G-XXXXXXXXXX` par votre véritable ID (recherchez `G-XXXXXXXXXX` dans le fichier).
-4. Déployez. Chaque installation de la PWA déclenchera automatiquement un événement `pwa_install`, visible dans GA4 sous Rapports → Engagement → Événements.
+- **Installer** : Android, bannière « Installer » ou bouton 📲 ; iPhone, Safari → Partager → « Sur l'écran d'accueil ».
+- **Nouvelle version** : changez `APP_VERSION` en haut de `index.html`, puis publiez. L'app propose la mise à jour (🔄), garde les documents et redemande les conditions.
+- **Analytics** : l'ID de mesure `SIRVOX_GA_ID` se trouve en haut de `index.html`.
 
-Le script est chargé en `async` : si l'utilisateur est hors ligne ou bloque le tracker, l'application continue de fonctionner normalement (aucune dépendance bloquante).
-
----
-
-## 🚀 Déploiement
-
-SIRVOX est 100 % statique — aucun serveur, aucune base de données requise.
-
-1. **Netlify Drop** (le plus simple) : allez sur [app.netlify.com/drop](https://app.netlify.com/drop) et glissez le dossier `sirvox-pwa` entier. Vous obtenez une URL HTTPS immédiatement.
-2. **GitHub Pages** : poussez ce dépôt, activez "Pages" dans les réglages du repo.
-3. **Vercel / Cloudflare Pages** : fonctionnent de la même façon.
-
-⚠️ Un **HTTPS** est obligatoire pour que le mode hors-ligne (service worker) fonctionne — c'est automatique avec les trois options ci-dessus.
-
-### Installer sur un téléphone
-- **Android** : ouvrez le lien, une bannière "Installer SIRVOX" apparaît automatiquement.
-- **iPhone** : ouvrez le lien dans Safari → bouton Partager → "Sur l'écran d'accueil".
-
----
-
-## 🧩 Bibliothèques externes (chargées à la demande)
-
-Aucune dépendance n'est chargée au démarrage — l'app s'ouvre instantanément, même hors ligne. Ces bibliothèques ne sont récupérées que lorsqu'elles sont réellement nécessaires :
-
-| Bibliothèque | Utilisée pour | Chargée quand |
-|---|---|---|
-| [JSZip](https://stuk.github.io/jszip/) | Lecture des fichiers `.docx` | Import d'un `.docx` |
-| [pdf.js](https://mozilla.github.io/pdf.js/) | Lecture des fichiers `.pdf` | Import d'un `.pdf` |
-| [Tesseract.js](https://tesseract.projectnaptha.com/) | Reconnaissance de texte sur image | Utilisation de l'outil IA |
-| Google Analytics (gtag.js) | Suivi des installations | Au chargement, en arrière-plan (async) |
+Bibliothèques chargées à la demande, puis gardées pour le hors ligne : pdf.js (PDF), Tesseract.js (image). JSZip (DOCX) est intégré à `index.html`.
 
 ---
 
 ## ⚠️ Limitations connues
 
-- **Import sur ordinateur (PC)** : moins fiable pour l'instant que sur mobile — une version dédiée PC est prévue séparément.
-- **Pas de synchronisation entre appareils** : la bibliothèque, les marques-pages et l'historique sont stockés localement sur l'appareil (`localStorage`). Changer de téléphone signifie repartir de zéro.
-- **Lecture en arrière-plan (écran verrouillé)** : retirée de cette version — les navigateurs mobiles interrompent la synthèse vocale de façon peu fiable en arrière-plan ; une solution plus robuste sera étudiée plus tard.
-- **Outil IA** : bon sur texte imprimé / captures d'écran ; l'écriture manuscrite n'est pas prise en charge (résultats trop peu fiables pour être utiles).
-- **Avertissement légal** : l'écran de consentement et le rappel intégré sont des mesures de sensibilisation, pas une protection technique — ils ne peuvent pas empêcher un usage abusif, seulement le décourager et engager la responsabilité de l'utilisateur qui accepte les conditions.
+- **Stockage local** (≈ 5 Mo, `localStorage`) : pas de synchronisation entre appareils.
+- **PDF** : les PDF scannés (sans texte) et les mises en page à deux colonnes ne sont pas gérés ; `.doc` non pris en charge (enregistrer en `.docx`).
+- **Outil IA** : texte imprimé et captures d'écran uniquement, pas d'écriture manuscrite ; sur photo, la qualité dépend de la lumière. Ce n'est pas Google Lens (non intégrable dans une app tierce).
+- **Lecture écran verrouillé** : non disponible (les navigateurs mobiles coupent la synthèse vocale en arrière-plan).
+- **Import sur PC** : moins fiable que sur mobile ; une version dédiée est prévue.
+- **Légal** : le consentement sensibilise et engage l'utilisateur, il n'empêche pas techniquement un usage abusif.
 
 ---
 
@@ -132,4 +80,3 @@ Aucune dépendance n'est chargée au démarrage — l'app s'ouvre instantanémen
 ## 📄 Licence
 
 Projet personnel — à adapter selon vos besoins.
-

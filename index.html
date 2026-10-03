@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
-<title>SIRVOX V8.7 • Lecteur Pro</title>
+<title>SIRVOX V8.8 • Lecteur Pro</title>
 <link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#80f837">
 <meta name="description" content="SIRVOX : lecteur vocal et d'étude hors ligne, installable comme application.">
@@ -37,9 +37,10 @@ https://github.com/nodeca/pako/blob/main/LICENSE
      Chargé uniquement après acceptation des conditions, et seulement si l'ID est valide. */
   /* ▼▼ À CHANGER À CHAQUE NOUVEAU DÉPLOIEMENT ▼▼
      APP_VERSION   : provoque la mise à jour de l'app installée (bandeau + bouton 🔄) et le rafraîchissement du cache.
-     LEGAL_VERSION : si vous la changez, les conditions d'utilisation sont redemandées à tout le monde. */
-  const APP_VERSION   = '8.7.1';
-  const LEGAL_VERSION = '8.7';
+     LEGAL_VERSION : liée à APP_VERSION → les conditions d'utilisation sont redemandées à chaque mise à jour,
+     et aussi à chaque nouvelle installation de l'application (voir l'événement « appinstalled »). */
+  const APP_VERSION   = '8.8';
+  const LEGAL_VERSION = APP_VERSION;   // conditions redemandées à chaque nouvelle version
   const SIRVOX_GA_ID = 'G-8ELBJ9SZRL';
   window.dataLayer = window.dataLayer || [];
   function gtag(){ dataLayer.push(arguments); }
@@ -248,13 +249,31 @@ body.immersion .controls {
 }
 
 @media(max-width:600px){.app.desktop{grid-template-columns:1fr}}
+
+/* Lens-style image viewer (AI tools) */
+.lens-frame{position:relative;border-radius:14px;overflow:hidden;background:#000}
+.lens-stage{max-height:62vh;overflow:auto;-webkit-overflow-scrolling:touch}
+.lens-wrap{position:relative;line-height:0}
+.lens-wrap img{display:block;width:100%;height:auto;user-select:none;-webkit-user-drag:none}
+#aiLensLayer{position:absolute;inset:0}
+.lens-line{position:absolute;background:rgba(235,238,245,.50);border-radius:5px;cursor:pointer;transition:background .12s,box-shadow .12s;-webkit-tap-highlight-color:transparent}
+.lens-line:hover{background:rgba(235,238,245,.72)}
+.lens-line.sel{background:rgba(66,133,244,.42);box-shadow:inset 0 0 0 2px rgba(66,133,244,.95)}
+.lens-corner{position:absolute;width:26px;height:26px;border:4px solid #fff;pointer-events:none;opacity:.9;z-index:2}
+.lens-corner.tl{top:8px;left:8px;border-right:0;border-bottom:0;border-top-left-radius:14px}
+.lens-corner.tr{top:8px;right:8px;border-left:0;border-bottom:0;border-top-right-radius:14px}
+.lens-corner.bl{bottom:8px;left:8px;border-right:0;border-top:0;border-bottom-left-radius:14px}
+.lens-corner.br{bottom:8px;right:8px;border-left:0;border-top:0;border-bottom-right-radius:14px}
+.lens-pill{position:absolute;left:50%;bottom:16px;transform:translateX(-50%);background:#fff;color:#111;border:none;border-radius:999px;padding:12px 24px;font-size:15px;font-weight:600;line-height:1.2;box-shadow:0 2px 10px rgba(0,0,0,.4);cursor:pointer;z-index:3;white-space:nowrap}
+.sv-h1{font-size:1.3em;text-align:center;margin-top:12px}
 </style>
 </head>
 <body>
 <div class="app" id="app">
   <header>
-    <div class="logo"><h1>SIR<span>VOX</span> <small id="verLabel" style="font-size:11px;font-weight:500;opacity:.7">V8.7</small></h1></div>
+    <div class="logo"><h1>SIR<span>VOX</span> <small id="verLabel" style="font-size:11px;font-weight:500;opacity:.7">V8.8</small></h1></div>
     <div class="header-btns">
+      <button class="btn-sec" id="installBtn" style="flex:0;padding:5px 7px;font-size:13px;display:none" title="Installer l'application">📲</button>
       <button class="btn-sec" id="infoBtn" style="flex:0;padding:5px 7px;font-size:13px" title="Infos">ℹ️</button>
       <button class="btn-sec" id="updateBtn" style="flex:0;padding:5px 7px;font-size:13px" title="Mettre à jour">🔄</button>
       <button class="btn-sec" id="termsBtn" style="flex:0;padding:5px 7px;font-size:13px" title="Conditions d'utilisation">📜</button>
@@ -426,11 +445,18 @@ body.immersion .controls {
     <p id="aiInstructions" style="font-size:13px;color:var(--text);margin-bottom:14px;line-height:1.6"></p>
     <button class="btn btn-play" id="aiImageBtn" style="width:100%"></button>
     <div id="aiPreviewPanel" style="display:none;margin-top:14px">
-      <div style="font-size:11px;color:var(--muted);font-weight:700;margin-bottom:6px">IMAGE</div>
-      <div style="background:var(--soft);border:1px solid var(--border);border-radius:12px;padding:8px;max-height:240px;overflow:auto;text-align:center">
-        <img id="aiImagePreview" alt="Image sélectionnée" style="max-width:100%;max-height:220px;border-radius:8px;display:inline-block">
+      <div class="lens-frame">
+        <div class="lens-stage">
+          <div class="lens-wrap">
+            <img id="aiImagePreview" alt="">
+            <div id="aiLensLayer"></div>
+          </div>
+        </div>
+        <span class="lens-corner tl"></span><span class="lens-corner tr"></span><span class="lens-corner bl"></span><span class="lens-corner br"></span>
+        <button type="button" class="lens-pill" id="aiSelectAllBtn"></button>
       </div>
-      <div style="font-size:11px;color:var(--muted);font-weight:700;margin:12px 0 6px">TEXTE EXTRAIT</div>
+      <p id="aiLensHint" style="font-size:11px;color:var(--muted);margin-top:8px;line-height:1.5"></p>
+      <div id="aiSelLabel" style="font-size:11px;color:var(--muted);font-weight:700;margin:12px 0 6px"></div>
       <textarea id="aiExtractedText" style="width:100%;min-height:180px;background:var(--soft);border:1px solid var(--border);border-radius:12px;padding:12px;color:var(--text);font-size:14px;line-height:1.55;resize:vertical" spellcheck="false"></textarea>
       <div class="controls" style="margin-top:8px">
         <button class="btn-sec" id="aiCopyBtn"></button>
@@ -562,7 +588,8 @@ body.immersion .controls {
   'use strict';
 
   const MAX_FILE_SIZE = 10 * 1024 * 1024;      // 10 Mo
-  const MAX_STORAGE   = 25 * 1024 * 1024;      // 25 Mo
+  const MAX_STORAGE   = 5 * 1024 * 1024;       // 5 Mo : quota réel de localStorage dans la plupart des navigateurs
+  const MAX_DOC_CHARS = 400000;                 // taille max d'un document sauvegardé
   const CHUNK_SIZE    = 1800;
   const STORAGE_KEY   = 'sirvox_v82';
 
@@ -608,7 +635,7 @@ body.immersion .controls {
       loading:"Extraction du texte…", tooBig:"Fichier trop volumineux (max 10 Mo).",
       errorRead:"Impossible de lire ce document.", saved:"Document sauvegardé", noText:"Aucun texte à lire.",
       errorNeedsInternetImport:"Connexion internet nécessaire pour importer ce type de fichier (une seule fois, ensuite ça fonctionne hors ligne).",
-      male:"Homme", female:"Femme", storage:"Stockage", storageFull:"Stockage plein (25 Mo). Supprimez des documents.",
+      male:"Homme", female:"Femme", storage:"Stockage", storageFull:"Stockage plein (5 Mo). Supprimez des documents.",
       immerseOn:"Quitter immersion", immerseOff:"Mode immersion", infoBtn:"Infos", termsBtn:"Conditions d'utilisation",
       updateAvailable:"🔄 Une nouvelle version de SIRVOX est prête. Mettez à jour pour en profiter (vos documents sont conservés).", updateBtn:"Mettre à jour", updateChecking:"Recherche de mise à jour…", upToDate:"✅ Vous avez la dernière version", updateOffline:"Connexion internet nécessaire pour vérifier les mises à jour.", updateTitle:"Mettre à jour / vérifier la version",
       usageReminder:"⚠️ Usage personnel et non commercial uniquement — respectez les droits d'auteur.",
@@ -630,7 +657,14 @@ body.immersion .controls {
       sleepTimerOff:"Minuterie de sommeil désactivée",
       sleepTimerFired:"⏱ Lecture arrêtée (minuterie de sommeil)",
       bookmarkNamePrompt:"Nom du marque-page :",
-      bookmarkDocMissing:"(document supprimé)"
+      bookmarkDocMissing:"(document supprimé)",
+      installTitle:"Installer l'application",
+      installManual:"Pour installer SIRVOX : ouvrez le menu ⋮ de votre navigateur, puis « Installer l'application » ou « Ajouter à l'écran d'accueil ».",
+      aiSelectAll:"Sélectionner le texte", aiSelectNone:"Tout désélectionner", aiSelLabel:"TEXTE SÉLECTIONNÉ",
+      aiLensHint:"Touchez une ligne surlignée pour l'ajouter ou la retirer. Le texte sélectionné apparaît ci-dessous : vous pouvez le modifier, le copier ou l'insérer dans le document.",
+      errorDoc:"Format .doc non pris en charge : enregistrez le fichier en .docx puis réessayez.",
+      errorScannedPdf:"Ce PDF ne contient pas de texte (scan). Utilisez OUTILS IA — IMAGE VERS TEXTE.",
+      savedTruncated:"Document sauvegardé (tronqué à 400 000 caractères)"
     },
     en: {
       doc:"DOCUMENT — OFFLINE READER", open:"OPEN", pages:"PAGES X-Y", search:"SEARCH",
@@ -647,7 +681,7 @@ body.immersion .controls {
       loading:"Extracting text…", tooBig:"File too large (max 10 MB).",
       errorRead:"Unable to read this document.", saved:"Document saved", noText:"No text to read.",
       errorNeedsInternetImport:"An internet connection is required to import this file type (one-time only — works offline afterwards).",
-      male:"Male", female:"Female", storage:"Storage", storageFull:"Storage full (25 MB). Delete some documents.",
+      male:"Male", female:"Female", storage:"Storage", storageFull:"Storage full (5 MB). Delete some documents.",
       immerseOn:"Exit immersion", immerseOff:"Immersion mode", infoBtn:"Info", termsBtn:"Terms of use",
       updateAvailable:"🔄 A new version of SIRVOX is ready. Update to get it (your documents are kept).", updateBtn:"Update now", updateChecking:"Checking for updates…", upToDate:"✅ You have the latest version", updateOffline:"An internet connection is required to check for updates.", updateTitle:"Update / check version",
       usageReminder:"⚠️ Personal, non-commercial use only — please respect copyright.",
@@ -669,7 +703,14 @@ body.immersion .controls {
       sleepTimerOff:"Sleep timer off",
       sleepTimerFired:"⏱ Playback stopped (sleep timer)",
       bookmarkNamePrompt:"Bookmark name:",
-      bookmarkDocMissing:"(document deleted)"
+      bookmarkDocMissing:"(document deleted)",
+      installTitle:"Install the app",
+      installManual:"To install SIRVOX: open your browser menu ⋮, then \"Install app\" or \"Add to Home screen\".",
+      aiSelectAll:"Select text", aiSelectNone:"Deselect all", aiSelLabel:"SELECTED TEXT",
+      aiLensHint:"Tap a highlighted line to add or remove it. The selected text appears below: edit it, copy it, or insert it into the document.",
+      errorDoc:"The .doc format is not supported: save the file as .docx and try again.",
+      errorScannedPdf:"This PDF has no text layer (scan). Use AI TOOLS — IMAGE TO TEXT.",
+      savedTruncated:"Document saved (truncated to 400,000 characters)"
     }
   };
 
@@ -693,14 +734,16 @@ body.immersion .controls {
     document.getElementById('storageBar').style.width = pct + '%';
     document.getElementById('storagePct').textContent = pct + '%';
     document.getElementById('storageInfo').textContent = db.docs.length + ' Docs';
-    document.getElementById('storageLabel').textContent = t('storage') + ' (' + (used/1024/1024).toFixed(1) + ' / 25 Mo)';
+    document.getElementById('storageLabel').textContent = t('storage') + ' (' + (used/1024/1024).toFixed(1) + ' / 5 Mo)';
   }
   function saveDB() {
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(db));
       updateStorageUI();
+      return true;
     } catch(e) {
       toast(t('storageFull'));
+      return false;
     }
   }
 
@@ -842,7 +885,8 @@ body.immersion .controls {
     db.legalAccepted = {
       accepted: true,
       date: new Date().toLocaleDateString(legalGateLang === 'fr' ? 'fr-FR' : 'en-US'),
-      version: LEGAL_VERSION
+      version: LEGAL_VERSION,
+      standalone: isStandaloneMode()      // acceptance in the browser does not count for the installed app
     };
     saveDB();
     document.getElementById('legalGate').style.display = 'none';
@@ -850,6 +894,7 @@ body.immersion .controls {
     showWelcomeIfNeeded();
     initAnalytics(); flushTracking();
     track('terms_accepted', { event_category: 'engagement' });
+    maybeShowInstallBanner();
   };
   document.getElementById('legalDeclineBtn').onclick = () => {
     document.getElementById('legalGate').style.display = 'none';
@@ -985,16 +1030,115 @@ body.immersion .controls {
             d[i] = d[i + 1] = d[i + 2] = stretched;
           }
           ctx.putImageData(imageData, 0, 0);
-          canvas.toBlob(blob => { URL.revokeObjectURL(url); resolve(blob || file); }, 'image/png');
+          canvas.toBlob(blob => { URL.revokeObjectURL(url); resolve({ blob: blob || file, w: w, h: h }); }, 'image/png');
         } catch (_) {
           URL.revokeObjectURL(url);
-          resolve(file);
+          resolve({ blob: file, w: 0, h: 0 });
         }
       };
-      img.onerror = () => { URL.revokeObjectURL(url); resolve(file); };
+      img.onerror = () => { URL.revokeObjectURL(url); resolve({ blob: file, w: 0, h: 0 }); };
       img.src = url;
     });
   }
+
+  // ——— Google Lens–style viewer: image + tappable highlighted lines → text ———
+  let aiImagePreviewUrl = null;
+  let aiLines = [];
+  let aiSel = new Set();
+  let aiDrag = null, aiDragMoved = false;
+
+  function ocrCollectLines(data) {
+    const out = [];
+    const push = (ln, para) => {
+      if (!ln || !ln.bbox) return;
+      const text = (ln.text || '').replace(/\s+/g, ' ').trim();
+      if (!text) return;
+      const conf = typeof ln.confidence === 'number' ? ln.confidence : 100;
+      if (conf < 30 && text.length < 4) return;            // stray marks at page edges
+      out.push({ text: text, x0: ln.bbox.x0, y0: ln.bbox.y0, x1: ln.bbox.x1, y1: ln.bbox.y1, para: para });
+    };
+    let paras = data.paragraphs;
+    if (!paras && data.blocks) paras = data.blocks.reduce((a, b) => a.concat(b.paragraphs || []), []);
+    if (paras && paras.some(p => p.lines && p.lines.length)) {
+      paras.forEach((p, pi) => (p.lines || []).forEach(l => push(l, pi)));
+    } else {
+      let pi = 0, prev = null;
+      (data.lines || []).forEach(l => {
+        if (prev && l.bbox && prev.bbox) {
+          const h = Math.max(1, prev.bbox.y1 - prev.bbox.y0);
+          if ((l.bbox.y0 - prev.bbox.y1) > h * 0.7 || (l.bbox.x0 - prev.bbox.x0) > h * 1.5) pi++;
+        }
+        push(l, pi);
+        prev = l;
+      });
+    }
+    return out;
+  }
+
+  function aiBuildText() {
+    const idx = Array.from(aiSel).sort((a, b) => a - b);
+    let out = '', prev = null;
+    idx.forEach(i => {
+      const l = aiLines[i];
+      if (prev === null) { out = l.text; }
+      else if (i === prev + 1 && l.para === aiLines[prev].para) {
+        out = (/[A-Za-zÀ-ÿ]-$/.test(out) && /^[a-zà-ÿ]/.test(l.text)) ? out.slice(0, -1) + l.text : out + ' ' + l.text;
+      } else { out += '\n\n' + l.text; }
+      prev = i;
+    });
+    return out;
+  }
+
+  function aiRefresh() {
+    document.querySelectorAll('#aiLensLayer .lens-line').forEach(el => el.classList.toggle('sel', aiSel.has(parseInt(el.dataset.i, 10))));
+    const pill = document.getElementById('aiSelectAllBtn');
+    pill.style.display = aiLines.length ? 'block' : 'none';
+    pill.textContent = (aiLines.length && aiSel.size === aiLines.length) ? t('aiSelectNone') : t('aiSelectAll');
+    document.getElementById('aiLensHint').style.display = aiLines.length ? 'block' : 'none';
+    if (aiLines.length) document.getElementById('aiExtractedText').value = aiBuildText();
+  }
+
+  function aiRenderLens(W, H) {
+    const layer = document.getElementById('aiLensLayer');
+    if (!aiLines.length || !W || !H) { layer.innerHTML = ''; aiLines = []; return; }
+    layer.innerHTML = aiLines.map((l, i) => {
+      const padX = (l.y1 - l.y0) * 0.25, padY = (l.y1 - l.y0) * 0.1;
+      const x0 = Math.max(0, l.x0 - padX), y0 = Math.max(0, l.y0 - padY);
+      const x1 = Math.min(W, l.x1 + padX), y1 = Math.min(H, l.y1 + padY);
+      return '<div class="lens-line" data-i="' + i + '" style="left:' + (x0 / W * 100) + '%;top:' + (y0 / H * 100) +
+             '%;width:' + ((x1 - x0) / W * 100) + '%;height:' + ((y1 - y0) / H * 100) + '%"></div>';
+    }).join('');
+  }
+
+  (function wireLens() {
+    const layer = document.getElementById('aiLensLayer');
+    layer.addEventListener('click', e => {
+      const el = e.target.closest('.lens-line'); if (!el) return;
+      if (aiDragMoved) { aiDragMoved = false; return; }
+      const i = parseInt(el.dataset.i, 10);
+      if (aiSel.has(i)) aiSel.delete(i); else aiSel.add(i);
+      aiRefresh();
+    });
+    layer.addEventListener('mousedown', e => {          // desktop: drag across lines to select a range
+      const el = e.target.closest('.lens-line'); if (!el) return;
+      const i = parseInt(el.dataset.i, 10);
+      aiDrag = { anchor: i, mode: !aiSel.has(i) }; aiDragMoved = false; e.preventDefault();
+    });
+    layer.addEventListener('mouseover', e => {
+      if (!aiDrag) return;
+      const el = e.target.closest('.lens-line'); if (!el) return;
+      const i = parseInt(el.dataset.i, 10);
+      if (i === aiDrag.anchor && !aiDragMoved) return;
+      aiDragMoved = true;
+      for (let k = Math.min(i, aiDrag.anchor); k <= Math.max(i, aiDrag.anchor); k++) { if (aiDrag.mode) aiSel.add(k); else aiSel.delete(k); }
+      aiRefresh();
+    });
+    window.addEventListener('mouseup', () => { aiDrag = null; });
+    document.getElementById('aiSelectAllBtn').onclick = () => {
+      if (aiSel.size === aiLines.length) aiSel.clear(); else aiLines.forEach((_, i) => aiSel.add(i));
+      aiRefresh();
+    };
+  })();
 
   async function runOcrOnFile(file) {
     if (!file) return;
@@ -1011,8 +1155,8 @@ body.immersion .controls {
     statusEl.textContent = t('aiAnalyzing') + ' 0%';
     try {
       await loadTesseract();
-      const processedImage = await preprocessImageForOcr(file);
-      const { data } = await Tesseract.recognize(processedImage, 'fra+eng', {
+      const pre = await preprocessImageForOcr(file);
+      const { data } = await Tesseract.recognize(pre.blob, 'fra+eng', {
         logger: m => {
           if (typeof m.progress === 'number') {
             statusEl.textContent = t('aiAnalyzing') + ' ' + Math.round(m.progress * 100) + '%';
@@ -1021,12 +1165,23 @@ body.immersion .controls {
       });
       const text = (data && data.text || '').trim();
       if (!text) { toast(t('aiError')); statusEl.textContent = ''; return; }
-      const preview = document.getElementById('aiImagePreview');
+
+      aiLines = ocrCollectLines(data);
+      aiSel = new Set(aiLines.map((_, i) => i));
+
+      const img = document.getElementById('aiImagePreview');
       if (aiImagePreviewUrl) URL.revokeObjectURL(aiImagePreviewUrl);
       aiImagePreviewUrl = URL.createObjectURL(file);
-      preview.src = aiImagePreviewUrl;
+      const dims = await new Promise(res => {
+        const fallback = setTimeout(() => res({ w: pre.w, h: pre.h }), 4000);   // never hang if the image event is lost
+        img.onload = () => { clearTimeout(fallback); res({ w: pre.w || img.naturalWidth, h: pre.h || img.naturalHeight }); };
+        img.onerror = () => { clearTimeout(fallback); res({ w: pre.w, h: pre.h }); };
+        img.src = aiImagePreviewUrl;
+      });
+      aiRenderLens(dims.w, dims.h);
       document.getElementById('aiExtractedText').value = text;
       document.getElementById('aiPreviewPanel').style.display = 'block';
+      aiRefresh();
       statusEl.textContent = '';
       toast(t('aiDone'));
     } catch (err) {
@@ -1036,8 +1191,6 @@ body.immersion .controls {
       statusEl.style.color = '#d9534f';
     }
   }
-
-  let aiImagePreviewUrl = null;
   document.getElementById('aiBtn').onclick = () => {
     document.getElementById('aiStatus').textContent = '';
     document.getElementById('aiOverlay').style.display = 'flex';
@@ -1075,60 +1228,85 @@ body.immersion .controls {
     if (f) runOcrOnFile(f);
   };
 
-  // ——— Install prompt: custom banner instead of relying on the browser's own UI ———
-  // Android/Chrome/Edge expose `beforeinstallprompt`, which we intercept to show our
-  // own styled banner+button. iOS Safari has no such API at all — the only thing any
-  // web app can do there is show manual "tap Share > Add to Home Screen" instructions.
+  // ——— Install prompt: custom banner + permanent header button ———
+  // Android/Chrome/Edge fire `beforeinstallprompt` (we keep the event and use it from
+  // our own banner/button). iOS Safari has no such API: only manual instructions exist.
+  // The banner re-appears each time the link is opened (until the app is installed);
+  // "Plus tard" only hides it for the current visit. The 📲 header button is always there.
   const isStandaloneMode = () =>
     window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
   const isIOS = () => /iphone|ipad|ipod/i.test(navigator.userAgent) && !window.MSStream;
 
   let deferredInstallPrompt = null;
+  let installBannerHidden = false;   // this visit only
 
-  function showInstallBanner(mode) {
+  const legalGateOpen = () =>
+    document.getElementById('legalGate').style.display !== 'none' ||
+    document.getElementById('legalBlocked').style.display === 'flex';
+
+  function updateInstallButton() {
+    const b = document.getElementById('installBtn');
+    if (b) b.style.display = isStandaloneMode() ? 'none' : 'inline-block';
+  }
+
+  function showInstallBanner(mode, force) {
     const banner = document.getElementById('installBanner');
-    if (!banner || db.installDismissed === APP_VERSION || isStandaloneMode()) return;
-    document.getElementById('installBannerText').textContent = mode === 'ios' ? t('iosInstallText') : t('installBannerText');
+    if (!banner || isStandaloneMode()) return;
+    if (!force && (installBannerHidden || legalGateOpen())) return;
+    document.getElementById('installBannerText').textContent =
+      mode === 'ios' ? t('iosInstallText') : mode === 'manual' ? t('installManual') : t('installBannerText');
     const actionBtn = document.getElementById('installActionBtn');
     actionBtn.style.display = mode === 'android' ? 'block' : 'none';
     actionBtn.textContent = t('installBtn');
-    document.getElementById('installDismissBtn').textContent = mode === 'ios' ? t('iosInstallDismiss') : t('installDismiss');
+    document.getElementById('installDismissBtn').textContent = mode === 'android' ? t('installDismiss') : t('iosInstallDismiss');
     banner.style.display = 'block';
     banner.dataset.mode = mode;
+  }
+
+  function maybeShowInstallBanner() {
+    if (isStandaloneMode()) return;
+    if (deferredInstallPrompt) showInstallBanner('android');
+    else if (isIOS()) showInstallBanner('ios');
+  }
+
+  async function runInstallPrompt() {
+    if (!deferredInstallPrompt) return false;
+    document.getElementById('installBanner').style.display = 'none';
+    const ev = deferredInstallPrompt;
+    deferredInstallPrompt = null;
+    try { ev.prompt(); await ev.userChoice; } catch (_) {}
+    return true;
   }
 
   window.addEventListener('beforeinstallprompt', (e) => {
     e.preventDefault();
     deferredInstallPrompt = e;
+    updateInstallButton();
     showInstallBanner('android');
   });
 
   document.getElementById('installDismissBtn').onclick = () => {
     document.getElementById('installBanner').style.display = 'none';
-    db.installDismissed = APP_VERSION;
-    saveDB();
+    installBannerHidden = true;
   };
-
-  document.getElementById('installActionBtn').onclick = async () => {
-    if (!deferredInstallPrompt) return;
-    document.getElementById('installBanner').style.display = 'none';
-    deferredInstallPrompt.prompt();
-    try { await deferredInstallPrompt.userChoice; } catch (_) {}
-    deferredInstallPrompt = null;
-    db.installDismissed = APP_VERSION;
-    saveDB();
+  document.getElementById('installActionBtn').onclick = () => { runInstallPrompt(); };
+  document.getElementById('installBtn').onclick = async () => {
+    if (await runInstallPrompt()) return;
+    showInstallBanner(isIOS() ? 'ios' : 'manual', true);
   };
 
   window.addEventListener('appinstalled', () => {
+    deferredInstallPrompt = null;
     document.getElementById('installBanner').style.display = 'none';
-    db.installDismissed = APP_VERSION;
+    updateInstallButton();
+    // A fresh install = a fresh download: the terms must be accepted again in the installed app.
+    db.legalAccepted = null;
     saveDB();
     track('pwa_install', { event_category: 'engagement', event_label: 'SIRVOX PWA installed' });
   });
 
-  if (isIOS() && !isStandaloneMode() && db.installDismissed !== APP_VERSION) {
-    setTimeout(() => showInstallBanner('ios'), 2500);
-  }
+  updateInstallButton();
+  if (isIOS() && !isStandaloneMode()) setTimeout(maybeShowInstallBanner, 2500);
 
   // ——— Suivi Google Analytics (mis en file d'attente tant que les conditions ne sont pas acceptées) ———
   function track(name, params) {
@@ -1253,9 +1431,9 @@ body.immersion .controls {
     const installBanner = document.getElementById('installBanner');
     if (installBanner && installBanner.style.display !== 'none') {
       const mode = installBanner.dataset.mode;
-      document.getElementById('installBannerText').textContent = mode === 'ios' ? tr.iosInstallText : tr.installBannerText;
+      document.getElementById('installBannerText').textContent = mode === 'ios' ? tr.iosInstallText : mode === 'manual' ? tr.installManual : tr.installBannerText;
       document.getElementById('installActionBtn').textContent = tr.installBtn;
-      document.getElementById('installDismissBtn').textContent = mode === 'ios' ? tr.iosInstallDismiss : tr.installDismiss;
+      document.getElementById('installDismissBtn').textContent = mode === 'android' ? tr.installDismiss : tr.iosInstallDismiss;
     }
     document.getElementById('lDoc').textContent = tr.doc;
     document.getElementById('openBtn').textContent = tr.open;
@@ -1288,6 +1466,10 @@ body.immersion .controls {
     document.getElementById('aiInsertBtn').textContent = tr.aiInsert;
     document.getElementById('aiNote').textContent = tr.aiNote;
     document.getElementById('aiPhotoTip').textContent = tr.aiPhotoTip;
+    document.getElementById('aiSelLabel').textContent = tr.aiSelLabel;
+    document.getElementById('aiLensHint').textContent = tr.aiLensHint;
+    document.getElementById('aiSelectAllBtn').textContent = (aiLines.length && aiSel.size === aiLines.length) ? tr.aiSelectNone : tr.aiSelectAll;
+    document.getElementById('installBtn').title = tr.installTitle;
     document.getElementById('layoutBtn').textContent = document.getElementById('app').classList.contains('desktop') ? tr.layoutMobile : tr.layout;
     document.getElementById('bookmarkBtn').textContent = tr.bookmark;
     document.getElementById('repeatBtn').title = tr.repeatTitle;
@@ -1365,11 +1547,30 @@ body.immersion .controls {
     document.getElementById('langOverlay').style.display = 'none';
   };
 
+  const ISO3 = { fr:'fra', en:'eng', de:'deu', es:'spa', pt:'por' };
+  function voiceMatchesLang(v, prefix) {
+    const base = (v.lang || '').toLowerCase().replace('_', '-').split('-')[0];
+    return base === prefix || base === ISO3[prefix] || (prefix === 'de' && base === 'ger');
+  }
+  // Best voice first: exact locale (pt-BR), then offline-capable (localService), then system default
+  function voicesForLang() {
+    const prefix = selectedLang.split('-')[0];
+    const full = selectedLang.toLowerCase();
+    const score = v => {
+      let s = 0;
+      if ((v.lang || '').toLowerCase().replace('_', '-').startsWith(full)) s += 4;
+      if (v.localService) s += 2;
+      if (v.default) s += 1;
+      return s;
+    };
+    return synth.getVoices().filter(v => voiceMatchesLang(v, prefix)).sort((a, b) => score(b) - score(a));
+  }
+
   function populateVoiceSelect() {
     const sel = document.getElementById('voiceSelect');
     if (!sel) return;
     const langPrefix = selectedLang.split('-')[0];
-    const voices = synth.getVoices().filter(v => v.lang.toLowerCase().startsWith(langPrefix));
+    const voices = voicesForLang();
     const stored = (db.voicePrefs || {})[langPrefix] || '';
 
     let html = `<option value="">${t('autoVoice')}</option>`;
@@ -1401,7 +1602,7 @@ body.immersion .controls {
       delete db.voicePrefs[langPrefix];
       selectedVoice = null;
     } else {
-      const voices = synth.getVoices().filter(v => v.lang.toLowerCase().startsWith(langPrefix));
+      const voices = voicesForLang();
       selectedVoice = voices.find(v => v.voiceURI === val) || null;
       db.voicePrefs[langPrefix] = val;
     }
@@ -1417,6 +1618,215 @@ body.immersion .controls {
   // ——— Text helpers ———
   const textDisplay = document.getElementById('textDisplay');
   const prog = document.getElementById('prog');
+
+  // ——— Structure markers: invisible characters that remember headings / paragraphs ———
+  // (never shown, never spoken: stripped before display, reading and search)
+  const MK_H1 = '\u2060\u2060';   // chapter / main title
+  const MK_H2 = '\u2060';         // sub-heading
+  const MK_BODY = '\u2063';       // normal paragraph (known not to be a heading)
+  const stripMarks = s => String(s == null ? '' : s).replace(/[\u2060\u2063]/g, '');
+  const CHAPTER_RE = /^(chapitre|chapter|partie|part|livre|book|prologue|épilogue|epilogue|préface|preface|avant-propos|introduction|conclusion|annexe|appendix|section|kapitel|teil|capítulo|capitulo|parte)\b/i;
+  const SENT_END_RE = /[.!?…»”"')]\s*$/;
+  const BLOCK_END_RE = /[.!?…»”"':)]\s*$/;
+  function joinLines(a, b) {
+    if (/[A-Za-zÀ-ÿ]-$/.test(a) && /^[a-zà-ÿ]/.test(b)) return a.slice(0, -1) + b;   // inter-\nrupt → interrupt
+    return a + ' ' + b;
+  }
+
+  // ——— DOCX: ordered paragraphs, real heading styles, line breaks, tabs ———
+  function parseDocxStyles(sx) {
+    const map = {};
+    (sx.match(/<w:style\b[\s\S]*?<\/w:style>/g) || []).forEach(block => {
+      const id = (block.match(/w:styleId="([^"]+)"/) || [])[1];
+      if (!id) return;
+      const name = (block.match(/<w:name w:val="([^"]*)"/) || [])[1] || '';
+      const ol = block.match(/<w:outlineLvl w:val="(\d+)"/);
+      map[id] = { name: name, outline: ol ? parseInt(ol[1], 10) : null };
+    });
+    return map;
+  }
+  function parseDocxParagraphs(xml, styleMap) {
+    const out = [];
+    const blocks = xml.match(/<w:p[ >][\s\S]*?<\/w:p>/g) || [];
+    const tok = /<w:t(?:\s[^>\/]*)?>([\s\S]*?)<\/w:t>|<w:tab\s*\/>|<w:br\b[^>]*\/>|<w:cr\s*\/>|<w:noBreakHyphen\s*\/>/g;
+    for (const p of blocks) {
+      const pPr = (p.match(/<w:pPr>[\s\S]*?<\/w:pPr>/) || [''])[0];
+      const styleId = (pPr.match(/<w:pStyle w:val="([^"]+)"/) || [])[1] || '';
+      const st = styleMap[styleId] || {};
+      const label = ((st.name || '') + ' ' + styleId).toLowerCase();
+      let level = 0, m;
+      if ((m = label.match(/(?:heading|titre|überschrift|título|titulo|titolo)\s*(\d)/))) level = Math.min(3, parseInt(m[1], 10));
+      else if (/(sous-titre|subtitle|untertitel)/.test(label)) level = 2;
+      else if (/^(title|titre|titel|título|titulo)\b/.test(label)) level = 1;
+      if (!level) {
+        const ol = pPr.match(/<w:outlineLvl w:val="(\d)"/);
+        const o = ol ? parseInt(ol[1], 10) : (st.outline != null ? st.outline : 9);
+        if (o < 9) level = Math.min(3, o + 1);
+      }
+      let text = '', mt;
+      tok.lastIndex = 0;
+      while ((mt = tok.exec(p)) !== null) {
+        const s = mt[0];
+        if (mt[1] !== undefined) text += decodeXmlEntities(mt[1]);
+        else if (/^<w:tab/.test(s)) text += ' ';
+        else if (/^<w:noBreakHyphen/.test(s)) text += '-';
+        else if (/^<w:br/.test(s)) { if (!/w:type="page"/.test(s)) text += '\n'; }
+        else if (/^<w:cr/.test(s)) text += '\n';
+      }
+      text = text.replace(/[ \t\u00A0]+/g, ' ').replace(/ *\n */g, '\n').replace(/^\n+|\n+$/g, '').trim();
+      if (text) out.push({ text: text, level: level });
+    }
+    return out;
+  }
+  function docxParagraphsToText(paras) {
+    return paras.map(p => (p.level === 1 ? MK_H1 : p.level >= 2 ? MK_H2 : MK_BODY) + p.text).join('\n\n') + '\n\n';
+  }
+
+  // ——— PDF: rebuild lines, then paragraphs / headings / chapters from geometry ———
+  function pdfBuildLines(items) {
+    const toks = [], seen = new Set();
+    for (const it of items) {
+      if (!it || typeof it.str !== 'string' || !it.str.length) continue;
+      const tr = it.transform || [1, 0, 0, 1, 0, 0];
+      const size = Math.abs(it.height) || Math.hypot(tr[2], tr[3]) || 10;
+      const key = it.str + '|' + Math.round(tr[4]) + '|' + Math.round(tr[5]);
+      if (seen.has(key)) continue;            // fake-bold text drawn twice
+      seen.add(key);
+      toks.push({ s: it.str, x: tr[4], y: tr[5], w: it.width || 0, size: size });
+    }
+    toks.sort((a, b) => (b.y - a.y) || (a.x - b.x));
+    const lines = [];
+    for (const tk of toks) {
+      const last = lines[lines.length - 1];
+      if (last && (last.y - tk.y) <= Math.max(1.5, Math.min(last.size, tk.size) * 0.45)) last.parts.push(tk);
+      else lines.push({ y: tk.y, size: tk.size, parts: [tk] });
+    }
+    lines.forEach(L => {
+      L.parts.sort((a, b) => a.x - b.x);
+      let best = L.parts[0];
+      L.parts.forEach(p => { if (p.s.trim().length > best.s.trim().length) best = p; });
+      L.size = best.size;
+      let text = '', prevEnd = null;
+      L.parts.forEach(p => {
+        if (prevEnd !== null && p.x - prevEnd > L.size * 0.18 && !/\s$/.test(text) && !/^\s/.test(p.s)) text += ' ';
+        text += p.s;
+        prevEnd = prevEnd === null ? p.x + p.w : Math.max(prevEnd, p.x + p.w);
+      });
+      L.text = text.replace(/\u00AD/g, '').replace(/\s+/g, ' ').trim();
+      L.x0 = L.parts[0].x;
+      L.x1 = prevEnd;
+    });
+    return lines.filter(L => L.text);
+  }
+
+  function pdfAssemble(pagesLines, pageWidths) {
+    const nPages = pagesLines.length;
+    const keyOf = s => s.toLowerCase().replace(/\d+/g, '#').replace(/\s+/g, ' ').trim();
+    const numOnly = /^[\s\-–—_.]*\d{1,4}[\s\-–—_.]*$/;
+    const pageWord = /^(page|p\.|seite|página|pagina)\s*\d+(\s*(\/|sur|of|de|von)\s*\d+)?$/i;
+    const frac = /^\d+\s*\/\s*\d+$/;
+
+    // 1) drop page numbers and running headers/footers repeated on many pages
+    const counts = {};
+    pagesLines.forEach(lines => {
+      const edge = new Set();
+      [0, 1, lines.length - 2, lines.length - 1].forEach(i => {
+        if (i >= 0 && i < lines.length && lines[i].text.length <= 80) edge.add(keyOf(lines[i].text));
+      });
+      edge.forEach(k => { counts[k] = (counts[k] || 0) + 1; });
+    });
+    const repeatMin = Math.max(3, Math.ceil(nPages * 0.35));
+    const cleaned = pagesLines.map(lines => lines.filter((L, i) => {
+      if (!(i <= 1 || i >= lines.length - 2)) return true;
+      const txt = L.text;
+      if (numOnly.test(txt) && (i === 0 || i === lines.length - 1)) return false;
+      if (pageWord.test(txt) || frac.test(txt)) return false;
+      if (nPages >= 4 && txt.length <= 80 && counts[keyOf(txt)] >= repeatMin && !numOnly.test(txt)) return false;
+      return true;
+    }));
+
+    // 2) body font size = the size carrying most characters
+    const hist = {};
+    cleaned.forEach(lines => lines.forEach(L => {
+      const k = Math.round(L.size * 2) / 2;
+      hist[k] = (hist[k] || 0) + L.text.length;
+    }));
+    let bodySize = 10, bestN = -1;
+    Object.keys(hist).forEach(k => { if (hist[k] > bestN) { bestN = hist[k]; bodySize = parseFloat(k); } });
+
+    // 3) lines → paragraphs / headings, page by page
+    const pageParas = cleaned.map((lines, pi) => {
+      const res = [];
+      if (!lines.length) return res;
+      const pageW = pageWidths[pi] || 600;
+      const x0s = {};
+      lines.forEach(L => { if (L.text.length > 25) { const k = Math.round(L.x0 / 2) * 2; x0s[k] = (x0s[k] || 0) + 1; } });
+      let left = Math.min.apply(null, lines.map(L => L.x0)), bestC = 0;
+      Object.keys(x0s).forEach(k => { if (x0s[k] > bestC) { bestC = x0s[k]; left = parseFloat(k); } });
+      const x1s = lines.map(L => L.x1).sort((a, b) => a - b);
+      const right = x1s[Math.min(x1s.length - 1, Math.floor(x1s.length * 0.9))];
+      const maxW = Math.max(50, right - left);
+      const dys = [];
+      for (let i = 1; i < lines.length; i++) {
+        const dy = lines[i - 1].y - lines[i].y;
+        if (dy > 0 && Math.abs(lines[i].size - lines[i - 1].size) < 0.5) dys.push(dy);
+      }
+      dys.sort((a, b) => a - b);
+      const leading = Math.max(bodySize * 0.9, dys.length ? dys[Math.floor(dys.length / 2)] : bodySize * 1.3);
+
+      let cur = null;
+      lines.forEach((L, i) => {
+        const prev = i > 0 ? lines[i - 1] : null;
+        const dy = prev ? prev.y - L.y : Infinity;
+        const width = L.x1 - L.x0;
+        const isolated = dy > leading * 1.25;
+        const short = width < maxW * 0.72;
+        const centered = short && Math.abs((L.x0 + L.x1) / 2 - pageW / 2) < pageW * 0.07;
+        const big = L.size >= bodySize * 1.18 && L.text.length <= 140;
+        const chapterWord = CHAPTER_RE.test(L.text) && L.text.length <= 70 && !/[,;]$/.test(L.text) && short && (isolated || i === 0);
+        const numeral = /^(\d{1,3}|[IVXLC]{1,6})\.?$/.test(L.text) && isolated && i > 0 && i < lines.length - 1;
+        const caps = L.text.length >= 3 && L.text.length <= 70 && L.text === L.text.toUpperCase() &&
+                     /[A-ZÀ-Ý]/.test(L.text) && !/[.!?]$/.test(L.text) && short && (centered || isolated || i === 0);
+        if (big || chapterWord || numeral || caps) {
+          const level = (chapterWord || numeral || L.size >= bodySize * 1.45) ? 1 : 2;
+          if (cur && cur.type === 'h' && prev && dy < leading * 1.8 && Math.abs(cur.size - L.size) < 0.6) {
+            cur.text = joinLines(cur.text, L.text);
+          } else {
+            cur = { type: 'h', level: level, text: L.text, size: L.size, startsParagraph: true };
+            res.push(cur);
+          }
+        } else {
+          let newPara = !cur || cur.type !== 'p';
+          if (!newPara) {
+            const indentInc = (L.x0 - prev.x0) > bodySize * 0.9 && (L.x0 - left) > bodySize * 0.7 && (L.x0 - left) < maxW * 0.4;
+            const vgap = dy > leading * 1.3;
+            const shortEnd = (prev.x1 - left) < maxW * 0.72 && BLOCK_END_RE.test(prev.text);
+            newPara = indentInc || vgap || shortEnd;
+          }
+          if (newPara) {
+            cur = { type: 'p', text: L.text, startsParagraph: i === 0 ? ((L.x0 - left) > bodySize * 0.7) : true };
+            res.push(cur);
+          } else {
+            cur.text = joinLines(cur.text, L.text);
+          }
+        }
+      });
+      return res;
+    });
+
+    // 4) glue a paragraph that continues across a page break
+    const out = [];
+    pageParas.forEach(pp => pp.forEach((p, j) => {
+      const last = out[out.length - 1];
+      if (j === 0 && last && last.type === 'p' && p.type === 'p' && !p.startsParagraph && !SENT_END_RE.test(last.text)) {
+        last.text = joinLines(last.text, p.text);
+        return;
+      }
+      out.push(p);
+    }));
+    if (!out.length) return '';
+    return out.map(p => (p.type === 'h' ? (p.level === 1 ? MK_H1 : MK_H2) : MK_BODY) + p.text).join('\n\n') + '\n\n';
+  }
 
   function escapeHtml(str) {
     return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
@@ -1449,7 +1859,20 @@ body.immersion .controls {
     const remainder = cleaned.slice(lastIndex).trim();
     if (remainder) result.push(remainder);
 
-    return (result.length ? result : [cleaned]).map(s => s.replace(/\s+/g, ' ').trim()).filter(s => s.length > 0);
+    const MAXLEN = 240;   // very long unpunctuated blocks make speech engines stall: cut at a comma / space
+    const out = [];
+    (result.length ? result : [cleaned]).forEach(s0 => {
+      let s = s0.replace(/\s+/g, ' ').trim();
+      while (s.length > MAXLEN) {
+        let cut = Math.max(s.lastIndexOf(', ', MAXLEN), s.lastIndexOf('; ', MAXLEN), s.lastIndexOf(': ', MAXLEN));
+        if (cut < 80) cut = s.lastIndexOf(' ', MAXLEN);
+        if (cut < 40) cut = MAXLEN;
+        out.push(s.slice(0, cut + 1).trim());
+        s = s.slice(cut + 1).trim();
+      }
+      if (s) out.push(s);
+    });
+    return out;
   }
 
   // Split page text into paragraphs, keeping chapters/headlines/paragraphs
@@ -1464,10 +1887,17 @@ body.immersion .controls {
   // A short line with no terminal punctuation is treated as a heading
   // (chapter title, section header, etc.) and styled accordingly.
   function isHeadingLike(paragraph) {
-    if (paragraph.length > 80) return false;
-    if (paragraph.includes('\n')) return false;
-    if (/[.!?…。！？؟]\s*$/.test(paragraph)) return false;
+    if (paragraph.charAt(0) === MK_H2.charAt(0)) return true;       // marked heading (from DOCX / PDF)
+    if (paragraph.charAt(0) === MK_BODY) return false;               // marked normal paragraph
+    const p = stripMarks(paragraph);
+    if (p.length > 80) return false;
+    if (p.includes('\n')) return false;
+    if (/[.!?…。！？؟]\s*$/.test(p)) return false;
     return true;
+  }
+  function isChapterStart(paragraph) {
+    if (paragraph.indexOf(MK_H1) === 0) return true;
+    return isHeadingLike(paragraph) && paragraph.charAt(0) !== MK_H2.charAt(0) && CHAPTER_RE.test(stripMarks(paragraph));
   }
 
   function renderSentences(pageText) {
@@ -1478,8 +1908,9 @@ body.immersion .controls {
     paragraphs.forEach(paragraph => {
       // Preserve single line breaks inside a paragraph (e.g. address blocks,
       // poem lines) while still allowing sentence splitting to work on it.
-      const lines = paragraph.split(/\n+/).map(l => l.trim()).filter(Boolean);
-      const heading = lines.length === 1 && isHeadingLike(lines[0]);
+      const level1 = paragraph.indexOf(MK_H1) === 0;
+      const heading = isHeadingLike(paragraph);
+      const lines = stripMarks(paragraph).split(/\n+/).map(l => l.trim()).filter(Boolean);
       const parText = lines.join(' ');
       const parSentences = splitIntoSentences(parText);
       if (!parSentences.length) return;
@@ -1491,7 +1922,7 @@ body.immersion .controls {
       }).join('');
 
       html += heading
-        ? `<p class="sv-paragraph sv-heading">${spans}</p>`
+        ? `<p class="sv-paragraph sv-heading${level1 ? ' sv-h1' : ''}">${spans}</p>`
         : `<p class="sv-paragraph">${spans}</p>`;
     });
 
@@ -1518,17 +1949,32 @@ body.immersion .controls {
   }
 
   // Allow free editing of the CURRENT page only — never collapse the whole document
+  // Rebuild the page text from the editor while keeping heading / paragraph markers
+  function serializeEditor() {
+    const kids = Array.from(textDisplay.children);
+    if (!kids.length || !textDisplay.querySelector('.sv-paragraph') || !kids.every(k => /^(P|DIV)$/.test(k.tagName))) return textDisplay.innerText;
+    const out = [];
+    kids.forEach(k => {
+      const txt = (k.innerText || '').replace(/\u00A0/g, ' ').trim();
+      if (!txt) return;
+      const mk = k.classList.contains('sv-h1') ? MK_H1 : k.classList.contains('sv-heading') ? MK_H2 : k.classList.contains('sv-paragraph') ? MK_BODY : '';
+      out.push(mk + txt);
+    });
+    return out.join('\n\n');
+  }
+
   function applyCurrentPageEdit() {
     if (isPlaying) return;
-    const txt = textDisplay.innerText;
-    if (!txt.trim() || txt === i18n.fr.defaultText || txt === i18n.en.defaultText) return;
+    const raw = textDisplay.innerText;
+    if (!raw.trim() || raw === i18n.fr.defaultText || raw === i18n.en.defaultText) return;
+    const txt = serializeEditor();
 
     if (pages.length > 1) {
       pages[currentPage] = txt;
       allText = pages.join('\n\n');
     } else {
       allText = txt;
-      splitPages(allText);
+      splitPages(allText, { history: false });
     }
   }
 
@@ -1584,25 +2030,30 @@ body.immersion .controls {
     document.getElementById('wordCount').textContent = w + ' ' + t('words');
   }
 
-  function splitPages(txt) {
+  function splitPages(txt, opts) {
     const cleaned = txt.replace(/\r\n/g, '\n').replace(/\n{3,}/g, '\n\n');
-    const paragraphs = cleaned.split(/\n\n+/);
+    const paragraphs = cleaned.split(/\n\n+/).filter(p => p.trim());
     const chunks = [];
-    let current = '';
+    let cur = [], len = 0;
+    const flush = () => { if (cur.length) chunks.push(cur.join('\n\n').trim()); cur = []; len = 0; };
     for (const p of paragraphs) {
-      if ((current + '\n\n' + p).length > CHUNK_SIZE) {
-        if (current) chunks.push(current.trim());
-        current = p;
-      } else {
-        current += (current ? '\n\n' : '') + p;
+      if (cur.length && !isHeadingLike(cur[cur.length - 1]) && isChapterStart(p)) {
+        flush();                                              // a new chapter always starts a new page
+      } else if (cur.length && len + 2 + p.length > CHUNK_SIZE) {
+        let carry = null;
+        if (cur.length > 1 && isHeadingLike(cur[cur.length - 1])) carry = cur.pop();   // never leave a heading alone at the end of a page
+        flush();
+        if (carry) { cur = [carry]; len = carry.length; }
       }
+      cur.push(p);
+      len += (cur.length > 1 ? 2 : 0) + p.length;
     }
-    if (current) chunks.push(current.trim());
+    flush();
     pages = chunks.length ? chunks : [txt];
     currentPage = 0;
     showCurrentPage();
     renderPdfViewer();
-    addHistory(txt.slice(0, 50));
+    if (!opts || opts.history !== false) addHistory(stripMarks(txt).slice(0, 50));
   }
 
   function showCurrentPage() {
@@ -1662,7 +2113,7 @@ body.immersion .controls {
     viewer.style.display = 'block';
     viewer.innerHTML = pages.map((p, i) =>
       `<div class="pdf-page ${i===currentPage?'active':''}" data-i="${i}">
-        <b>${t('page')} ${i+1}</b> — ${escapeHtml(p.slice(0,50))}…
+        <b>${t('page')} ${i+1}</b> — ${escapeHtml(stripMarks(p).slice(0,50))}…
       </div>`
     ).join('');
     viewer.querySelectorAll('.pdf-page').forEach(el => {
@@ -1766,18 +2217,18 @@ body.immersion .controls {
     highlightSentence(sentenceIndex);
     savePosition();
 
-    currentUtterance = new SpeechSynthesisUtterance(sentence);
+    const utt = new SpeechSynthesisUtterance(sentence);
+    currentUtterance = utt;
     currentUtterance.lang = selectedLang;
     let voiceToUse = selectedVoice;
     if (!voiceToUse) {
       // Safety net: voices can finish loading asynchronously after the
       // language was picked. Re-check right before speaking so a matching
       // voice is never missed just because of timing.
-      const langPrefix = selectedLang.split('-')[0];
-      voiceToUse = synth.getVoices().find(v => v.lang.toLowerCase().startsWith(langPrefix)) || null;
+      voiceToUse = voicesForLang()[0] || null;
     }
     if (voiceToUse) {
-      try { currentUtterance.voice = voiceToUse; } catch (_) { /* fall back to .lang alone */ }
+      try { currentUtterance.voice = voiceToUse; if (voiceToUse.lang) currentUtterance.lang = voiceToUse.lang; } catch (_) { /* fall back to .lang alone */ }
     }
     currentUtterance.rate = parseFloat(document.getElementById('rate').value);
     currentUtterance.pitch = parseFloat(document.getElementById('pitch').value);
@@ -1792,12 +2243,14 @@ body.immersion .controls {
     prog.style.width = (progress * 100) + '%';
     document.getElementById('pctInfo').textContent = Math.round(progress * 100) + '%';
 
-    currentUtterance.onend = () => {
-      if (!isPlaying || isPaused) return;
+    utt.onend = () => {
+      if (utt !== currentUtterance || !isPlaying || isPaused) return;
       sentenceIndex++;
       startSentenceSpeech();
     };
-    currentUtterance.onerror = () => {
+    utt.onerror = (ev) => {
+      if (utt !== currentUtterance) return;                       // stale event from a cancelled utterance
+      if (ev && (ev.error === 'canceled' || ev.error === 'interrupted')) return;
       if (isPlaying && !isPaused) {
         sentenceIndex++;
         setTimeout(() => startSentenceSpeech(), 80);
@@ -1906,6 +2359,8 @@ body.immersion .controls {
         full = await extractDocx(file);
       } else if (name.endsWith('.pdf') || file.type === 'application/pdf') {
         full = await extractPdf(file);
+      } else if (name.endsWith('.doc') || file.type === 'application/msword') {
+        toast(t('errorDoc')); return;
       } else {
         full = await readAsText(file);
       }
@@ -1916,7 +2371,9 @@ body.immersion .controls {
       toast('✓ ' + (file.name || 'Document'));
     } catch (err) {
       console.error(err);
-      if (/load failed|not loaded/i.test((err && err.message) || '')) {
+      if (/scanned-pdf/.test((err && err.message) || '')) {
+        toast(t('errorScannedPdf'));
+      } else if (/load failed|not loaded/i.test((err && err.message) || '')) {
         toast(t('errorNeedsInternetImport'));
       } else {
         toast(t('errorRead'));
@@ -1944,6 +2401,8 @@ body.immersion .controls {
   }
   function decodeXmlEntities(str) {
     return str
+      .replace(/&#x([0-9a-fA-F]+);/g, (_, h) => String.fromCodePoint(parseInt(h, 16)))
+      .replace(/&#(\d+);/g, (_, d) => String.fromCodePoint(parseInt(d, 10)))
       .replace(/&lt;/g, '<')
       .replace(/&gt;/g, '>')
       .replace(/&quot;/g, '"')
@@ -1997,24 +2456,14 @@ body.immersion .controls {
     await loadJSZip();
     const ab = await readAsArrayBuffer(file);
     const zip = await JSZip.loadAsync(ab);
-    const xmlFile = zip.file('word/document.xml');
-    if (!xmlFile) throw new Error('Invalid DOCX (missing word/document.xml)');
-    const xml = await xmlFile.async('string');
-
-    const paragraphMatches = xml.match(/<w:p[ >][\s\S]*?<\/w:p>/g) || [];
-    let full = '';
-    for (const p of paragraphMatches) {
-      const withBreaks = p
-        .replace(/<w:br[^/]*\/>/g, '\n')
-        .replace(/<w:tab[^/]*\/>/g, '\t');
-      const textMatches = withBreaks.match(/<w:t[^>]*>([\s\S]*?)<\/w:t>/g) || [];
-      const paragraphText = textMatches
-        .map(m => decodeXmlEntities(m.replace(/<w:t[^>]*>/, '').replace(/<\/w:t>/, '')))
-        .join('');
-      if (paragraphText.trim()) full += paragraphText + '\n\n';
-    }
-    if (!full.trim()) throw new Error('No readable text found in DOCX');
-    return full;
+    const docFile = zip.file('word/document.xml');
+    if (!docFile) throw new Error('Invalid DOCX (missing word/document.xml)');
+    const xml = await docFile.async('string');
+    const stFile = zip.file('word/styles.xml');
+    const styleMap = stFile ? parseDocxStyles(await stFile.async('string')) : {};
+    const paras = parseDocxParagraphs(xml, styleMap);
+    if (!paras.length) throw new Error('No readable text found in DOCX');
+    return docxParagraphsToText(paras);
   }
 
   async function extractPdf(file) {
@@ -2023,59 +2472,33 @@ body.immersion .controls {
     } catch (_) {
       throw new Error('pdf.js not loaded (blocked network or offline)');
     }
-    // Extract text only – images are ignored (good for heavy image PDFs).
-    // Groups items into visual lines (by y-position) so we can both
-    // reconstruct paragraph/line breaks AND detect + drop isolated
-    // page-number lines (typical header/footer folios like "12" or "- 12 -")
-    // that were otherwise getting read aloud in the middle of sentences.
     let pdf;
     try {
       const ab = await readAsArrayBuffer(file);
       pdf = await pdfjsLib.getDocument({ data: ab }).promise;
     } catch (workerErr) {
-      // Some browsers (notably Safari/WebKit, and locked-down desktop
-      // setups) can block the pdf.js background worker. Retry on the
-      // main thread rather than failing the import entirely.
+      // Some browsers (Safari/WebKit, locked-down setups) block the pdf.js worker: retry on the main thread
       console.warn('PDF worker failed, retrying without worker:', workerErr);
       const ab2 = await readAsArrayBuffer(file);
       pdf = await pdfjsLib.getDocument({ data: ab2, disableWorker: true }).promise;
     }
-
-    const pageNumberLine = /^[\s\-–—_.]*\d{1,4}[\s\-–—_.]*$/;
-    let full = '';
-
+    const pagesLines = [], widths = [];
     for (let i = 1; i <= pdf.numPages; i++) {
       const page = await pdf.getPage(i);
       const content = await page.getTextContent();
-
-      // Group text items into lines by vertical position
-      const lines = [];
-      for (const item of content.items) {
-        const y = item.transform ? item.transform[5] : 0;
-        let line = lines.find(l => Math.abs(l.y - y) < 2);
-        if (!line) { line = { y, height: item.height || 10, parts: [] }; lines.push(line); }
-        line.parts.push(item.str);
+      widths.push(page.getViewport({ scale: 1 }).width);
+      pagesLines.push(pdfBuildLines(content.items));
+      try { page.cleanup(); } catch (_) {}
+      if (i % 5 === 0) {      // keep the screen alive on big files
+        loadingEl.textContent = t('loading') + ' ' + i + '/' + pdf.numPages;
+        await new Promise(r => setTimeout(r, 0));
       }
-
-      let pageText = '';
-      let prevY = null;
-      lines.forEach((line, idx) => {
-        const text = line.parts.join(' ').replace(/\s+/g, ' ').trim();
-        if (!text) return;
-        // Skip a standalone numeric line sitting at the very top or bottom
-        // of the page — almost always a running page number, not content.
-        if (pageNumberLine.test(text) && (idx === 0 || idx === lines.length - 1)) return;
-        if (prevY !== null) {
-          const dy = Math.abs(prevY - line.y);
-          pageText += dy > (line.height || 10) * 1.5 ? '\n\n' : '\n';
-        }
-        pageText += text;
-        prevY = line.y;
-      });
-
-      if (pageText.trim()) full += pageText.trim() + '\n\n';
     }
-    return full;
+    loadingEl.textContent = t('loading');
+    try { pdf.destroy(); } catch (_) {}
+    const text = pdfAssemble(pagesLines, widths);
+    if (!text.trim()) throw new Error('scanned-pdf');
+    return text;
   }
 
   // ——— Navigation ———
@@ -2094,12 +2517,8 @@ body.immersion .controls {
   document.getElementById('searchInput').oninput = e => {
     const q = e.target.value.trim().toLowerCase();
     if (!q || !allText) return;
-    const idx = allText.toLowerCase().indexOf(q);
-    if (idx < 0) return;
-    let pos = 0;
     for (let i = 0; i < pages.length; i++) {
-      if (pos + pages[i].length >= idx) { goPage(i); break; }
-      pos += pages[i].length + 2;
+      if (stripMarks(pages[i]).toLowerCase().indexOf(q) >= 0) { goPage(i); break; }
     }
   };
 
@@ -2111,10 +2530,11 @@ body.immersion .controls {
   function loadDoc(id) {
     const d = db.docs.find(x => x.id == id);
     if (!d) return false;
+    const pos = db.positions[d.id] ? { page: db.positions[d.id].page, sentence: db.positions[d.id].sentence } : null;  // read BEFORE splitPages overwrites it
     allText = d.text;
     currentDocId = d.id;
-    splitPages(allText);
-    restorePosition(d.id);
+    splitPages(allText, { history: false });
+    if (pos) { currentPage = Math.min(pos.page || 0, pages.length - 1); sentenceIndex = pos.sentence || 0; }
     showCurrentPage();
     renderPdfViewer();
     upd();
@@ -2122,7 +2542,7 @@ body.immersion .controls {
   }
 
   document.getElementById('bookmarkBtn').onclick = () => {
-    const snippet = (pages[currentPage] || '').slice(0, 50);
+    const snippet = stripMarks(pages[currentPage] || '').slice(0, 50);
     const defaultName = snippet.slice(0, 30).trim() || (t('page') + ' ' + (currentPage + 1));
     const name = prompt(t('bookmarkNamePrompt'), defaultName);
     if (name === null) return; // cancelled
@@ -2155,17 +2575,19 @@ body.immersion .controls {
     if (title === null) return;
 
     const id = Date.now();
+    const truncated = allText.length > MAX_DOC_CHARS;
+    const previousDocs = db.docs.slice();
     db.docs.unshift({
       id,
       title: title.trim() || ('Doc ' + (db.docs.length + 1)),
-      text: allText.slice(0, 120000),
+      text: allText.slice(0, MAX_DOC_CHARS),
       date: new Date().toLocaleString()
     });
-    currentDocId = id;
     if (db.docs.length > 20) db.docs = db.docs.slice(0, 20);
-    saveDB();
+    if (!saveDB()) { db.docs = previousDocs; renderLib(); return; }   // storage refused: do not pretend it was saved
+    currentDocId = id;
     renderLib();
-    toast(t('saved'));
+    toast(t(truncated ? 'savedTruncated' : 'saved'));
   };
 
   function addHistory(snippet) {
@@ -2256,10 +2678,16 @@ body.immersion .controls {
   applyAudioSettings();
   updateStorageUI();
   renderLegalGate('fr');
-  if (db.legalAccepted && db.legalAccepted.accepted && db.legalAccepted.version === LEGAL_VERSION) {
+  // Valid only for THIS version and, in the installed app, only if it was accepted there.
+  function legalIsValid() {
+    const r = db.legalAccepted;
+    return !!(r && r.accepted && r.version === LEGAL_VERSION && (!isStandaloneMode() || r.standalone === true));
+  }
+  if (legalIsValid()) {
     initAnalytics(); flushTracking();
     document.getElementById('legalGate').style.display = 'none';
     showWelcomeIfNeeded();
+    maybeShowInstallBanner();
   }
   // If not yet accepted, the legal gate stays visible (its HTML default) and
   // showWelcomeIfNeeded() is triggered from the Accept button instead.
