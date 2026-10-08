@@ -4,7 +4,7 @@
   "short_name": "SIRVOX",
   "description": "Lecteur vocal et d'étude hors ligne, installable comme application.",
   "lang": "fr",
-  "start_url": "./?source=pwa",
+  "start_url": "./",
   "scope": "./",
   "display": "standalone",
   "orientation": "portrait",

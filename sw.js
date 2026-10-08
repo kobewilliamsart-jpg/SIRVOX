@@ -1,5 +1,5 @@
 /* SIRVOX service worker — le cache change à chaque version (index.html enregistre sw.js?v=APP_VERSION) */
-const VERSION = new URL(self.location.href).searchParams.get('v') || '8.8';
+const VERSION = new URL(self.location.href).searchParams.get('v') || '8.8.2';
 const CACHE = 'sirvox-' + VERSION;
 const CORE = [
   './', './index.html', './manifest.json',
