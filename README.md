@@ -3,7 +3,10 @@
 **Lecteur de texte à voix haute, pensé pour les étudiants.**
 Importez vos cours et écoutez-les où que vous soyez, même sans connexion. Application web progressive (PWA) : un dossier statique, installable sur téléphone sans App Store ni Play Store.
 
-**Version actuelle : 8.8.2**
+**Version actuelle : 8.8.3**
+
+### Nouveautés 8.8.3
+- **Installation PWA** : les icônes sont maintenant à la racine du site (plus de dossier `icons/`) ; le diagnostic 📲 affiche l'adresse exacte de chaque fichier introuvable. `manifest.json` n'est plus mis en cache.
 
 ### Nouveautés 8.8.2
 - **Phrases** : la lecture et le surlignage s'arrêtent uniquement à `.` `?` `!` — plus jamais à une virgule, un point-virgule ou une abréviation (Dr., M., cf., p. 12, Ps. 85, av. J.-C.…).
@@ -34,7 +37,7 @@ sirvox-pwa/
 ├── index.html        # Toute l'application (HTML, CSS, JS, JSZip)
 ├── manifest.json     # Métadonnées PWA
 ├── sw.js             # Service worker (cache hors ligne)
-├── icons/            # icon-192, icon-512, icon-512-maskable, apple-touch-icon, favicon-32
+├── icon-192.png, icon-512.png, icon-512-maskable.png, apple-touch-icon.png, favicon-32.png
 ├── splash/           # Écrans de démarrage iOS (11 tailles)
 ├── lib/              # pdf.min.js, pdf.worker.min.js, tesseract.min.js
 └── README.md

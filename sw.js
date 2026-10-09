@@ -1,9 +1,9 @@
 /* SIRVOX service worker — le cache change à chaque version (index.html enregistre sw.js?v=APP_VERSION) */
-const VERSION = new URL(self.location.href).searchParams.get('v') || '8.8.2';
+const VERSION = new URL(self.location.href).searchParams.get('v') || '8.8.3';
 const CACHE = 'sirvox-' + VERSION;
 const CORE = [
   './', './index.html', './manifest.json',
-  './icons/icon-192.png', './icons/icon-512.png', './icons/icon-512-maskable.png', './icons/apple-touch-icon.png', './icons/favicon-32.png',
+  './icon-192.png', './icon-512.png', './icon-512-maskable.png', './apple-touch-icon.png', './favicon-32.png',
   './lib/pdf.min.js', './lib/pdf.worker.min.js', './lib/tesseract.min.js'
 ];
 // Bibliothèques téléchargées une fois (PDF.js / Tesseract + langues) puis gardées pour le hors-ligne.
@@ -51,6 +51,6 @@ self.addEventListener('fetch', e => {
   const url = new URL(req.url);
   const same = url.origin === self.location.origin;
   if (!same && RUNTIME_HOSTS.indexOf(url.hostname) === -1) return;
-  if (req.mode === 'navigate' || (same && /(\/|index\.html)$/.test(url.pathname))) { e.respondWith(networkFirst(req)); return; }
+  if (req.mode === 'navigate' || (same && /(\/|index\.html|manifest\.json)$/.test(url.pathname))) { e.respondWith(networkFirst(req)); return; }
   e.respondWith(cacheFirst(req));
 });

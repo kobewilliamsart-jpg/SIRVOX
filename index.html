@@ -3,13 +3,13 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
-<title>SIRVOX V8.8.2 • Lecteur Pro</title>
+<title>SIRVOX V8.8.3 • Lecteur Pro</title>
 <link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#80f837">
 <meta name="description" content="SIRVOX : lecteur vocal et d'étude hors ligne, installable comme application.">
-<link rel="icon" type="image/png" sizes="32x32" href="icons/favicon-32.png">
-<link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
-<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<link rel="icon" type="image/png" sizes="32x32" href="favicon-32.png">
+<link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -39,7 +39,7 @@ https://github.com/nodeca/pako/blob/main/LICENSE
      APP_VERSION   : provoque la mise à jour de l'app installée (bandeau + bouton 🔄) et le rafraîchissement du cache.
      LEGAL_VERSION : liée à APP_VERSION → les conditions d'utilisation sont redemandées à chaque mise à jour,
      et aussi à chaque nouvelle installation de l'application (voir l'événement « appinstalled »). */
-  const APP_VERSION   = '8.8.2';
+  const APP_VERSION   = '8.8.3';
   const LEGAL_VERSION = APP_VERSION;   // conditions redemandées à chaque nouvelle version
   const SIRVOX_GA_ID = 'G-8ELBJ9SZRL';
   window.dataLayer = window.dataLayer || [];
@@ -285,7 +285,7 @@ body.immersion .controls {
 <body>
 <div class="app" id="app">
   <header>
-    <div class="logo"><h1>SIR<span>VOX</span> <small id="verLabel" style="font-size:11px;font-weight:500;opacity:.7">V8.8.2</small></h1></div>
+    <div class="logo"><h1>SIR<span>VOX</span> <small id="verLabel" style="font-size:11px;font-weight:500;opacity:.7">V8.8.3</small></h1></div>
     <div class="header-btns">
       <button class="btn-sec" id="installBtn" style="flex:0;padding:5px 7px;font-size:13px;display:none" title="Installer l'application">📲</button>
       <button class="btn-sec" id="infoBtn" style="flex:0;padding:5px 7px;font-size:13px" title="Infos">ℹ️</button>
@@ -488,7 +488,7 @@ body.immersion .controls {
 <!-- Update banner: shown when a newer version is ready (or when the user taps the update button) -->
 <div id="updateBanner" style="display:none;position:fixed;left:12px;right:12px;bottom:12px;z-index:10000;background:var(--card);border:2px solid var(--accent-strong);border-radius:14px;padding:14px;box-shadow:0 8px 24px rgba(0,0,0,.3)">
   <div style="display:flex;align-items:flex-start;gap:10px">
-    <img src="icons/icon-192.png" style="width:40px;height:40px;border-radius:10px;flex:0 0 auto" alt="">
+    <img src="icon-192.png" style="width:40px;height:40px;border-radius:10px;flex:0 0 auto" alt="">
     <div style="flex:1;min-width:0">
       <div id="updateBannerText" style="font-size:13px;line-height:1.5;margin-bottom:10px"></div>
       <div style="display:flex;gap:8px">
@@ -509,7 +509,7 @@ body.immersion .controls {
 </div>
 <div id="installBanner" style="display:none;position:fixed;left:12px;right:12px;bottom:12px;z-index:9999;background:var(--card);border:1px solid var(--border);border-radius:14px;padding:14px;box-shadow:0 8px 24px rgba(0,0,0,.25)">
   <div style="display:flex;align-items:flex-start;gap:10px">
-    <img src="icons/icon-192.png" style="width:40px;height:40px;border-radius:10px;flex:0 0 auto">
+    <img src="icon-192.png" style="width:40px;height:40px;border-radius:10px;flex:0 0 auto">
     <div style="flex:1;min-width:0">
       <div id="installBannerText" style="font-size:13px;line-height:1.5;margin-bottom:10px"></div>
       <div style="display:flex;gap:8px">
@@ -1469,9 +1469,10 @@ body.immersion .controls {
       add(!!(man.name || man.short_name) && !!man.start_url && man.display === 'standalone', 'Manifest complet', 'name, start_url, display = standalone');
       let has192 = false, has512 = false;
       for (const ic of (man.icons || [])) {
-        let ok = false;
-        try { const r = await fetch(new URL(ic.src, document.querySelector('link[rel="manifest"]').href), { cache: 'no-store' }); ok = r.ok; } catch (_) {}
-        add(ok, 'Icône ' + ic.sizes, ok ? '' : ic.src + ' introuvable : envoyez le dossier icons/ sur le site.');
+        let ok = false, status = '';
+        const iconUrl = new URL(ic.src, document.querySelector('link[rel="manifest"]').href).href;
+        try { const r = await fetch(iconUrl, { cache: 'no-store' }); ok = r.ok; status = r.status; } catch (_) { status = 'réseau'; }
+        add(ok, 'Icône ' + ic.sizes + (ic.purpose ? ' (' + ic.purpose + ')' : ''), ok ? '' : 'Introuvable (' + status + ') : ' + iconUrl + ' — le fichier doit être publié à cette adresse exacte, avec ce nom exact (les majuscules comptent).');
         if (ok && /192x192/.test(ic.sizes)) has192 = true;
         if (ok && /512x512/.test(ic.sizes)) has512 = true;
       }
