@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
-<title>SIRVOX V8.8.3 • Lecteur Pro</title>
+<title>SIRVOX V9.1.1 • Lecteur Pro</title>
 <link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#80f837">
 <meta name="description" content="SIRVOX : lecteur vocal et d'étude hors ligne, installable comme application.">
@@ -39,7 +39,7 @@ https://github.com/nodeca/pako/blob/main/LICENSE
      APP_VERSION   : provoque la mise à jour de l'app installée (bandeau + bouton 🔄) et le rafraîchissement du cache.
      LEGAL_VERSION : liée à APP_VERSION → les conditions d'utilisation sont redemandées à chaque mise à jour,
      et aussi à chaque nouvelle installation de l'application (voir l'événement « appinstalled »). */
-  const APP_VERSION   = '8.8.3';
+  const APP_VERSION   = '9.1.1';
   const LEGAL_VERSION = APP_VERSION;   // conditions redemandées à chaque nouvelle version
   const SIRVOX_GA_ID = 'G-8ELBJ9SZRL';
   window.dataLayer = window.dataLayer || [];
@@ -280,12 +280,21 @@ body.immersion .controls {
 .lens-corner.br{bottom:8px;right:8px;border-left:0;border-top:0;border-bottom-right-radius:14px}
 .lens-pill{position:absolute;left:50%;bottom:16px;transform:translateX(-50%);background:#fff;color:#111;border:none;border-radius:999px;padding:12px 24px;font-size:15px;font-weight:600;line-height:1.2;box-shadow:0 2px 10px rgba(0,0,0,.4);cursor:pointer;z-index:3;white-space:nowrap}
 .sv-h1{font-size:1.3em;text-align:center;margin-top:12px}
+
+/* Bible + lexicon screens */
+.chip{display:inline-flex;align-items:center;gap:4px;background:var(--soft);border:1px solid var(--border);border-radius:999px;padding:4px 6px 4px 11px;font-size:12px;margin:0 6px 6px 0}
+.chip button{border:none;background:transparent;color:var(--muted);font-size:14px;cursor:pointer;padding:0 5px;line-height:1}
+.bible-preview{max-height:34vh;overflow:auto;background:var(--soft);border:1px solid var(--border);border-radius:12px;padding:12px;font-size:14px;line-height:1.65;white-space:pre-wrap;margin-top:4px;-webkit-overflow-scrolling:touch}
+.bible-preview .bp-h{font-weight:800;margin:10px 0 2px;color:var(--accent-strong);white-space:normal}
+#lexOverlay,#bibleOverlay{z-index:10060}
+.welcome-box input,.welcome-box select,.welcome-box textarea{-webkit-user-select:text;user-select:text;touch-action:manipulation;-webkit-appearance:auto}
+.welcome-box input[type=text]{font-size:16px}
 </style>
 </head>
 <body>
 <div class="app" id="app">
   <header>
-    <div class="logo"><h1>SIR<span>VOX</span> <small id="verLabel" style="font-size:11px;font-weight:500;opacity:.7">V8.8.3</small></h1></div>
+    <div class="logo"><h1>SIR<span>VOX</span> <small id="verLabel" style="font-size:11px;font-weight:500;opacity:.7">V9.1.1</small></h1></div>
     <div class="header-btns">
       <button class="btn-sec" id="installBtn" style="flex:0;padding:5px 7px;font-size:13px;display:none" title="Installer l'application">📲</button>
       <button class="btn-sec" id="infoBtn" style="flex:0;padding:5px 7px;font-size:13px" title="Infos">ℹ️</button>
@@ -352,6 +361,7 @@ body.immersion .controls {
       <div style="display:flex;gap:6px;margin-top:8px;align-items:center">
         <input type="text" id="searchInput" placeholder="Rechercher…" style="display:none;flex:1">
         <button class="btn-sec" id="bookmarkBtn" style="flex:0 0 auto">＋ MARQUE-PAGE</button>
+        <button class="btn-sec" id="lexQuickBtn" style="flex:0 0 auto" data-i18n="lexQuick">＋ MOT</button>
       </div>
 
       <div class="controls">
@@ -360,9 +370,14 @@ body.immersion .controls {
         <button class="btn btn-stop" id="stopBtn" style="flex:1">ARRÊTER</button>
       </div>
       <div class="controls">
-        <button class="btn-sec" id="prevBtn">◀ PAGE</button>
-        <button class="btn-sec" id="nextBtn">PAGE ▶</button>
+        <button class="btn-sec" id="prevBtn">◀ PHRASE</button>
+        <button class="btn-sec" id="nextBtn">PHRASE ▶</button>
         <button class="btn-sec" id="saveBtn">SAUVEGARDER</button>
+      </div>
+      <div id="projectInfo" style="display:none;gap:8px;align-items:center;justify-content:space-between;margin-top:8px;font-size:12px;color:var(--muted)">
+        <span id="projectInfoText" style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"></span>
+        <label style="display:flex;gap:4px;align-items:center;margin:0;font-size:11px;flex:0 0 auto"><input type="checkbox" id="autoSaveChk"><span data-i18n="projAuto">Auto</span></label>
+        <button class="btn-sec" id="saveAsBtn" style="padding:3px 9px;font-size:11px;flex:0 0 auto" data-i18n="saveAs">Enregistrer sous…</button>
       </div>
 
       <div class="progress"><div id="prog"></div></div>
@@ -409,6 +424,10 @@ body.immersion .controls {
         <button class="btn-sec" id="histBtn" style="flex:1"><span id="histBtnLabel"></span></button>
       </div>
       <button class="btn-sec" id="aiBtn" style="width:100%;background:rgba(122,92,255,.15);border-color:#7a5cff;color:#7a5cff;font-weight:700"><span id="aiBtnLabel"></span></button>
+      <div style="display:flex;gap:6px;margin-top:6px">
+        <button class="btn-sec" id="bibleBtn" style="flex:1;background:rgba(214,158,46,.15);border-color:#d69e2e;color:#b7791f;font-weight:700" data-i18n="bibleBtn">📖 BIBLE HORS LIGNE</button>
+        <button class="btn-sec" id="lexBtn" style="flex:1;background:rgba(0,160,160,.12);border-color:#0aa;color:#088;font-weight:700" data-i18n="lexBtn">🗣️ LEXIQUE</button>
+      </div>
     </div>
   </div>
 </div>
@@ -482,6 +501,92 @@ body.immersion .controls {
     <div id="aiStatus" style="font-size:13px;margin-top:8px;font-weight:700"></div>
   </div>
 </div>
+
+<!-- Bible popup -->
+<div class="welcome-overlay" id="bibleOverlay" style="display:none">
+  <div class="welcome-box" style="max-width:560px">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+      <h2 data-i18n="bibleTitle" style="margin-bottom:0">BIBLE</h2>
+      <button type="button" class="btn-sec" id="bibleCloseBtn" style="flex:0;padding:6px 10px">✕</button>
+    </div>
+    <p data-i18n="bibleIntro"></p>
+    <div id="bibleNone" class="note" style="display:none" data-i18n="bibleNone"></div>
+    <div id="biblePickers" style="display:none">
+      <label data-i18n="bibleVersion">VERSION</label><select id="bibleVersion"></select>
+      <label style="margin-top:8px" data-i18n="bibleBookLbl">LIVRE</label><select id="bibleBook"></select>
+      <div style="display:flex;gap:8px;align-items:flex-end;margin-top:8px">
+        <div style="flex:1"><label data-i18n="bibleFromLbl">DU CHAPITRE</label><select id="bibleFrom"></select></div>
+        <div style="flex:1"><label data-i18n="bibleToLbl">AU CHAPITRE</label><select id="bibleTo"></select></div>
+        <button type="button" class="btn-sec" id="bibleWhole" style="flex:0 0 auto;padding:9px 10px" data-i18n="bibleWhole">Livre entier</button>
+      </div>
+      <button type="button" class="btn-sec" id="bibleAddBtn" style="width:100%;margin-top:8px" data-i18n="bibleAdd">＋ AJOUTER À LA SÉLECTION</button>
+      <div id="bibleBasketWrap" style="display:none;margin-top:8px"><label data-i18n="bibleBasketLbl">SÉLECTION</label><div id="bibleBasket" style="margin-top:6px"></div></div>
+      <label style="display:flex;gap:8px;align-items:center;margin:10px 0 0"><input type="checkbox" id="bibleNums"><span data-i18n="bibleNums">Inclure les numéros de versets</span></label>
+      <label style="margin-top:8px" data-i18n="bibleModeLbl">DANS LA LECTURE</label>
+      <select id="bibleMode"><option value="replace" data-i18n="bibleModeReplace">Remplacer le texte actuel</option><option value="append" data-i18n="bibleModeAppend">Ajouter à la suite du texte</option></select>
+      <label style="margin-top:10px" data-i18n="biblePreviewLbl">APERÇU</label>
+      <div id="biblePreview" class="bible-preview"></div>
+      <p id="bibleTruncNote" style="display:none;font-size:11px" data-i18n="bibleTrunc"></p>
+      <div class="controls" style="margin-top:10px">
+        <button class="btn-sec" id="bibleCopyBtn" data-i18n="bibleCopy">COPIER</button>
+        <button class="btn-sec" id="bibleInsertBtn" style="background:var(--accent-strong);color:var(--accent-text);font-weight:800" data-i18n="bibleInsert">INSÉRER DANS LA LECTURE</button>
+      </div>
+      <button class="btn btn-play" id="biblePlayBtn" style="width:100%;margin-top:8px" data-i18n="biblePlay">▶ INSÉRER ET ÉCOUTER</button>
+    </div>
+    <details id="bibleManage" style="margin-top:14px">
+      <summary data-i18n="bibleManage" style="cursor:pointer;font-weight:700;font-size:13px">Versions installées et ajout</summary>
+      <div id="bibleInstalledList"></div>
+      <div id="bibleCatalog"></div>
+      <label style="margin-top:12px" data-i18n="bibleImportTitle">IMPORTER MA PROPRE VERSION</label>
+      <input type="text" id="bibleImportName" data-i18n-ph="bibleImportName" autocomplete="off">
+      <select id="bibleImportLang" style="margin-top:6px"><option value="fr">Français</option><option value="en">English</option><option value="de">Deutsch</option><option value="es">Español</option><option value="pt">Português</option></select>
+      <button class="btn-sec" id="bibleImportBtn" style="width:100%;margin-top:6px" data-i18n="bibleImport"></button>
+      <p class="note" data-i18n="bibleLicenseNote"></p>
+    </details>
+    <div id="bibleStatus" style="font-size:13px;margin-top:8px;font-weight:700"></div>
+  </div>
+</div>
+<input type="file" id="bibleImportInput" accept=".json,.xml,application/json,text/xml,application/xml" hidden>
+
+<!-- Lexicon popup -->
+<div class="welcome-overlay" id="lexOverlay" style="display:none">
+  <div class="welcome-box" style="max-width:560px">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+      <h2 data-i18n="lexTitle" style="margin-bottom:0">LEXIQUE DE PRONONCIATION</h2>
+      <button type="button" class="btn-sec" id="lexCloseBtn" style="flex:0;padding:6px 10px">✕</button>
+    </div>
+    <p data-i18n="lexIntro"></p>
+    <label data-i18n="lexWord">MOT OU EXPRESSION</label><input type="text" id="lexWord" autocomplete="off" autocapitalize="off" spellcheck="false">
+    <label style="margin-top:8px" data-i18n="lexSay">COMMENT LE DIRE</label><input type="text" id="lexSay" data-i18n-ph="lexSayPh" autocomplete="off" autocapitalize="off" spellcheck="false">
+    <label style="margin-top:8px" data-i18n="lexIpa">IPA</label><input type="text" id="lexIpa" placeholder="ɛlɔˈim" autocomplete="off" spellcheck="false">
+    <div style="display:flex;gap:10px;align-items:flex-end;margin-top:8px">
+      <div style="flex:1"><label data-i18n="lexLangLbl">LANGUE</label><select id="lexLang"></select></div>
+      <label style="display:flex;gap:6px;align-items:center;margin:0 0 10px;flex:1"><input type="checkbox" id="lexCase"><span data-i18n="lexCase">Respecter les majuscules</span></label>
+    </div>
+    <div class="controls" style="margin-top:6px">
+      <button class="btn-sec" id="lexTestBtn" data-i18n="lexTest">▶ ÉCOUTER</button>
+      <button class="btn-sec" id="lexSaveBtn" style="background:var(--accent-strong);color:var(--accent-text);font-weight:800"></button>
+      <button class="btn-sec" id="lexCancelBtn" style="display:none" data-i18n="lexCancel">Annuler</button>
+    </div>
+    <label id="lexCount" style="margin-top:14px"></label>
+    <input type="text" id="lexSearch" data-i18n-ph="lexSearchPh" autocomplete="off" style="margin-top:6px">
+    <div id="lexList"></div>
+    <details style="margin-top:14px">
+      <summary data-i18n="lexExports" style="cursor:pointer;font-weight:700;font-size:13px">Sauvegarde et exports</summary>
+      <div class="controls" style="margin-top:8px">
+        <button class="btn-sec" id="lexExportJsonBtn" data-i18n="lexExportJson"></button>
+        <button class="btn-sec" id="lexImportBtn" data-i18n="lexImport"></button>
+      </div>
+      <button class="btn-sec" id="lexExportPlsBtn" style="width:100%;margin-top:6px" data-i18n="lexExportPls"></button>
+      <button class="btn-sec" id="lexExportSsmlBtn" style="width:100%;margin-top:6px" data-i18n="lexExportSsml"></button>
+    </details>
+    <details style="margin-top:10px">
+      <summary data-i18n="lexHelpTitle" style="cursor:pointer;font-weight:700;font-size:13px">Balises SSML prises en charge</summary>
+      <div class="note" data-i18n="lexHelp" style="white-space:pre-line;font-family:monospace;font-size:11px"></div>
+    </details>
+  </div>
+</div>
+<input type="file" id="lexImportInput" accept=".json,application/json" hidden>
 
 <input type="file" id="aiImageInput" accept="image/*" hidden>
 
@@ -623,6 +728,7 @@ body.immersion .controls {
   let isPlaying = false;
   let isPaused = false;
   let currentUtterance = null;
+  let speechSeq = 0;
   let currentFontSize = 15;
   let sentences = [];
   let sentenceIndex = 0;
@@ -633,9 +739,9 @@ body.immersion .controls {
   // • docs  : one record per saved document (written only when that document changes)
   // Data lives in the app's own browser profile: other websites cannot read it, and in the installed app it is
   // separate from normal browsing. It is NOT encrypted: anyone using your unlocked phone could still open the app.
-  const DB_NAME = 'sirvox', DB_VERSION = 1;
+  const DB_NAME = 'sirvox', DB_VERSION = 2;
   const MAX_DOCS = 200;
-  const emptyDB = () => ({ docs: [], bookmarks: [], history: [], positions: {}, welcomeSeen: false, voicePrefs: {} });
+  const emptyDB = () => ({ docs: [], bookmarks: [], history: [], positions: {}, welcomeSeen: false, voicePrefs: {}, lexicon: [], biblePacks: [], autoSave: true });
   let idb = null;
   let storageMode = 'local';          // 'idb' | 'local'
   let storageEstimate = null;         // { used, quota } from the browser
@@ -651,6 +757,7 @@ body.immersion .controls {
         const d = req.result;
         if (!d.objectStoreNames.contains('meta')) d.createObjectStore('meta');
         if (!d.objectStoreNames.contains('docs')) d.createObjectStore('docs', { keyPath: 'id' });
+        if (!d.objectStoreNames.contains('bible')) d.createObjectStore('bible', { keyPath: 'id' });
       };
       req.onsuccess = () => resolve(req.result);
       req.onerror = () => resolve(null);
@@ -792,7 +899,7 @@ body.immersion .controls {
       tone:"RÉGLAGES AUDIO & PRÉRÉGLAGES", speed:"Vitesse", pitch:"Ton", vol:"Volume",
       play:"LIRE / PAUSE", pauseTxt:"PAUSE", resumeTxt:"REPRENDRE", stop:"ARRÊTER",
       page:"Page", words:"mots", empty:"Aucun", save:"SAUVEGARDER",
-      prevPage:"◀ PAGE", nextPage:"PAGE ▶",
+      prevPage:"◀ PHRASE", nextPage:"PHRASE ▶",
       libTitle:"BIBLIOTHÈQUE", bookTitle:"MARQUES-PAGES", histTitle:"HISTORIQUE",
       layout:"BUREAU", layoutMobile:"MOBILE",
       bookmark:"＋ MARQUE-PAGE", delete:"SUPPRIMER", rename:"Renommer",
@@ -823,7 +930,7 @@ body.immersion .controls {
       sleepTimerFired:"⏱ Lecture arrêtée (minuterie de sommeil)",
       bookmarkNamePrompt:"Nom du marque-page :",
       bookmarkDocMissing:"(document supprimé)",
-      installTitle:"Installer l'application", diagTitle:"Diagnostic d'installation", diagClose:"Fermer", diagBtn:"Diagnostic", inAppWarn:"Ce lien est ouvert dans un navigateur intégré (Facebook, WhatsApp, etc.) qui ne permet pas d'installer l'application. Ouvrez-le dans Chrome (Android) ou Safari (iPhone) : menu ⋮ → « Ouvrir dans le navigateur ».",
+      installTitle:"Installer l'application", saveAs:"Enregistrer sous…", savedProject:"Projet « {t} » enregistré ✓", projAuto:"Auto", savedAt:"enregistré à", lexBtn:"🗣️ LEXIQUE", lexQuick:"＋ MOT", lexTitle:"LEXIQUE DE PRONONCIATION", lexIntro:"Ajoutez un mot et dites comment le prononcer : la voix l'utilisera chaque fois qu'elle le rencontre. Le texte affiché ne change pas.", lexWord:"MOT OU EXPRESSION", lexSay:"COMMENT LE DIRE", lexSayPh:"ex. é-lo-ime", lexIpa:"IPA (facultatif — pour l'export SSML / PLS)", lexLangLbl:"LANGUE", lexAll:"Toutes", lexCase:"Respecter les majuscules", lexTest:"▶ ÉCOUTER", lexSave:"AJOUTER AU LEXIQUE", lexUpdate:"METTRE À JOUR", lexCancel:"Annuler", lexSearchPh:"Rechercher dans le lexique…", lexEmpty:"Aucun mot pour l'instant.", lexWords:"mot(s)", lexNeed:"Indiquez le mot et sa prononciation.", lexSaved:"Mot enregistré ✓", lexBadFile:"Fichier non reconnu.", lexExports:"Sauvegarde et exports", lexExportJson:"Exporter (JSON)", lexImport:"Importer (JSON)", lexExportPls:"Exporter PLS (langue de lecture)", lexExportSsml:"Exporter le document en SSML", lexHelpTitle:"Balises SSML prises en charge", lexHelp:"Dans « Comment le dire », vous pouvez écrire :\n<break time=\"500ms\"/>   pause\n<prosody rate=\"slow\" pitch=\"high\" volume=\"soft\">…</prosody>\n<emphasis level=\"strong\">…</emphasis>\n<sub alias=\"…\">…</sub>\n\nLes voix du navigateur ne lisent pas le SSML : SIRVOX l'exécute lui-même (pauses, vitesse, hauteur, volume). L'export SSML / PLS sert aux voix cloud (Azure, Google, Amazon…).", bibleBtn:"📖 BIBLE HORS LIGNE", bibleTitle:"BIBLE", bibleIntro:"Choisissez une version, un livre et des chapitres. Copiez-les, ou envoyez-les dans la lecture pour les écouter. Une fois la version installée, tout fonctionne sans connexion.", bibleNone:"Aucune version installée. Ouvrez « Versions installées et ajout » ci-dessous pour en installer une (téléchargement unique).", bibleVersion:"VERSION", bibleBookLbl:"LIVRE", bibleFromLbl:"DU CHAPITRE", bibleToLbl:"AU CHAPITRE", bibleWhole:"Livre entier", bibleAdd:"＋ AJOUTER À LA SÉLECTION", bibleBasketLbl:"SÉLECTION (plusieurs passages)", bibleNums:"Inclure les numéros de versets (lus à voix haute)", bibleModeLbl:"DANS LA LECTURE", bibleModeReplace:"Remplacer le texte actuel", bibleModeAppend:"Ajouter à la suite du texte", biblePreviewLbl:"APERÇU", bibleTrunc:"Aperçu raccourci : le texte complet sera copié ou inséré.", bibleCopy:"COPIER", bibleInsert:"INSÉRER DANS LA LECTURE", biblePlay:"▶ INSÉRER ET ÉCOUTER", bibleManage:"Versions installées et ajout", bibleGetLsg:"Installer Louis Segond 1910 (français, domaine public)", bibleGetKjv:"Installer King James (anglais, domaine public)", bibleImportTitle:"IMPORTER MA PROPRE VERSION", bibleImportName:"Nom de la version (ex. NKJV)", bibleImport:"CHOISIR LE FICHIER (JSON / XML)", bibleLicenseNote:"La NKJV (Thomas Nelson) et La Bible du Semeur (Biblica) sont protégées par des droits d'auteur : elles ne sont pas incluses, même si certains dépôts en ligne en hébergent des copies non autorisées. Si vous détenez une licence, importez votre fichier : il reste sur votre appareil.", bibleOwnLicense:"Fichier personnel (licence de l'utilisateur)", bibleInstalling:"Installation…", bibleInstalled:"Version installée ✓", bibleNeedsNet:"Connexion requise pour ce téléchargement.", bibleErr:"Impossible d'installer ce fichier.", bibleFile404:"Fichier introuvable sur le site : {f}. Envoyez-le avec index.html.", bibleNeedName:"Indiquez d'abord le nom de la version.", bibleConfirmDel:"Supprimer cette version de l'appareil ?", bibleInserted:"Passage inséré dans la lecture ✓", bibleCopied:"Copié ✓", bibleInstallLbl:"Installer", bibleNoIdb:"La Bible hors ligne nécessite le stockage interne du navigateur (IndexedDB).", diagTitle:"Diagnostic d'installation", diagClose:"Fermer", diagBtn:"Diagnostic", inAppWarn:"Ce lien est ouvert dans un navigateur intégré (Facebook, WhatsApp, etc.) qui ne permet pas d'installer l'application. Ouvrez-le dans Chrome (Android) ou Safari (iPhone) : menu ⋮ → « Ouvrir dans le navigateur ».",
       installManual:"Pour installer SIRVOX : ouvrez le menu ⋮ de votre navigateur, puis « Installer l'application » ou « Ajouter à l'écran d'accueil ».",
       aiSelectAll:"Sélectionner le texte", aiSelectNone:"Tout désélectionner", aiSelLabel:"TEXTE SÉLECTIONNÉ",
       aiLensHint:"Touchez une ligne surlignée pour l'ajouter ou la retirer. Le texte sélectionné apparaît ci-dessous : vous pouvez le modifier, le copier ou l'insérer dans le document.",
@@ -838,7 +945,7 @@ body.immersion .controls {
       tone:"AUDIO SETTINGS & PRESETS", speed:"Speed", pitch:"Tone", vol:"Volume",
       play:"PLAY / PAUSE", pauseTxt:"PAUSE", resumeTxt:"RESUME", stop:"STOP",
       page:"Page", words:"words", empty:"None", save:"SAVE",
-      prevPage:"◀ PAGE", nextPage:"PAGE ▶",
+      prevPage:"◀ SENTENCE", nextPage:"SENTENCE ▶",
       libTitle:"LIBRARY", bookTitle:"BOOKMARKS", histTitle:"HISTORY",
       layout:"DESKTOP", layoutMobile:"MOBILE",
       bookmark:"＋ BOOKMARK", delete:"DELETE", rename:"Rename",
@@ -869,7 +976,7 @@ body.immersion .controls {
       sleepTimerFired:"⏱ Playback stopped (sleep timer)",
       bookmarkNamePrompt:"Bookmark name:",
       bookmarkDocMissing:"(document deleted)",
-      installTitle:"Install the app", diagTitle:"Install diagnostic", diagClose:"Close", diagBtn:"Diagnostic", inAppWarn:"This link is open in an in-app browser (Facebook, WhatsApp, etc.) which cannot install apps. Open it in Chrome (Android) or Safari (iPhone): menu ⋮ → \"Open in browser\".",
+      installTitle:"Install the app", saveAs:"Save as…", savedProject:"Project “{t}” saved ✓", projAuto:"Auto", savedAt:"saved at", lexBtn:"🗣️ LEXICON", lexQuick:"＋ WORD", lexTitle:"PRONUNCIATION LEXICON", lexIntro:"Add a word and tell the voice how to say it: it will be used every time the word comes up. The text on screen does not change.", lexWord:"WORD OR PHRASE", lexSay:"HOW TO SAY IT", lexSayPh:"e.g. eh-LOH-heem", lexIpa:"IPA (optional — for SSML / PLS export)", lexLangLbl:"LANGUAGE", lexAll:"All", lexCase:"Match capital letters", lexTest:"▶ LISTEN", lexSave:"ADD TO LEXICON", lexUpdate:"UPDATE", lexCancel:"Cancel", lexSearchPh:"Search the lexicon…", lexEmpty:"No words yet.", lexWords:"word(s)", lexNeed:"Enter the word and its pronunciation.", lexSaved:"Word saved ✓", lexBadFile:"Unrecognised file.", lexExports:"Backup and exports", lexExportJson:"Export (JSON)", lexImport:"Import (JSON)", lexExportPls:"Export PLS (reading language)", lexExportSsml:"Export the document as SSML", lexHelpTitle:"Supported SSML tags", lexHelp:"In “How to say it” you can write:\n<break time=\"500ms\"/>   pause\n<prosody rate=\"slow\" pitch=\"high\" volume=\"soft\">…</prosody>\n<emphasis level=\"strong\">…</emphasis>\n<sub alias=\"…\">…</sub>\n\nBrowser voices do not read SSML: SIRVOX runs it itself (pauses, speed, pitch, volume). The SSML / PLS export is for cloud voices (Azure, Google, Amazon…).", bibleBtn:"📖 OFFLINE BIBLE", bibleTitle:"BIBLE", bibleIntro:"Pick a version, a book and chapters. Copy them, or send them to the reader to listen. Once a version is installed, everything works offline.", bibleNone:"No version installed. Open “Installed versions and add” below to install one (one-time download).", bibleVersion:"VERSION", bibleBookLbl:"BOOK", bibleFromLbl:"FROM CHAPTER", bibleToLbl:"TO CHAPTER", bibleWhole:"Whole book", bibleAdd:"＋ ADD TO SELECTION", bibleBasketLbl:"SELECTION (several passages)", bibleNums:"Include verse numbers (read aloud)", bibleModeLbl:"IN THE READER", bibleModeReplace:"Replace the current text", bibleModeAppend:"Add after the current text", biblePreviewLbl:"PREVIEW", bibleTrunc:"Preview shortened: the full text will be copied or inserted.", bibleCopy:"COPY", bibleInsert:"INSERT INTO READER", biblePlay:"▶ INSERT AND LISTEN", bibleManage:"Installed versions and add", bibleGetLsg:"Install Louis Segond 1910 (French, public domain)", bibleGetKjv:"Install King James (English, public domain)", bibleImportTitle:"IMPORT MY OWN VERSION", bibleImportName:"Version name (e.g. NKJV)", bibleImport:"CHOOSE FILE (JSON / XML)", bibleLicenseNote:"The NKJV (Thomas Nelson) and La Bible du Semeur (Biblica) are copyrighted: they are not included, even though some online repositories host unauthorised copies. If you hold a licence, import your file — it stays on your device.", bibleOwnLicense:"Personal file (user's licence)", bibleInstalling:"Installing…", bibleInstalled:"Version installed ✓", bibleNeedsNet:"Internet required for this download.", bibleErr:"This file could not be installed.", bibleFile404:"File not found on the site: {f}. Upload it next to index.html.", bibleNeedName:"Enter the version name first.", bibleConfirmDel:"Remove this version from the device?", bibleInserted:"Passage inserted into the reader ✓", bibleCopied:"Copied ✓", bibleInstallLbl:"Install", bibleNoIdb:"The offline Bible needs the browser's internal storage (IndexedDB).", diagTitle:"Install diagnostic", diagClose:"Close", diagBtn:"Diagnostic", inAppWarn:"This link is open in an in-app browser (Facebook, WhatsApp, etc.) which cannot install apps. Open it in Chrome (Android) or Safari (iPhone): menu ⋮ → \"Open in browser\".",
       installManual:"To install SIRVOX: open your browser menu ⋮, then \"Install app\" or \"Add to Home screen\".",
       aiSelectAll:"Select text", aiSelectNone:"Deselect all", aiSelLabel:"SELECTED TEXT",
       aiLensHint:"Tap a highlighted line to add or remove it. The selected text appears below: edit it, copy it, or insert it into the document.",
@@ -897,7 +1004,7 @@ body.immersion .controls {
         "Importez un fichier (TXT, DOCX ou PDF), collez votre texte, ou utilisez les outils IA pour extraire le texte d'une image.",
         "Choisissez une des 5 langues de lecture et, si besoin, une voix précise parmi celles installées sur votre téléphone.",
         "Appuyez sur Lire pour démarrer la lecture — la phrase en cours est surlignée automatiquement.",
-        "Utilisez ◀ PAGE / PAGE ▶ pour naviguer, ↺ pour répéter la dernière phrase, et + MARQUE-PAGE pour nommer un passage à retrouver plus tard.",
+        "Utilisez ◀ PHRASE / PHRASE ▶ pour avancer ou reculer phrase par phrase (la barre de pages en bas change de page), ↺ pour répéter la dernière phrase, et + MARQUE-PAGE pour nommer un passage à retrouver plus tard.",
         "Ouvrez Bibliothèque, Marques-pages ou Historique depuis les boutons dédiés pour retrouver vos documents.",
         "Réglez une minuterie de sommeil pour que la lecture s'arrête automatiquement après X minutes."
       ],
@@ -925,7 +1032,7 @@ body.immersion .controls {
         "Import a file (TXT, DOCX or PDF), paste your text, or use the AI tools to extract text from an image.",
         "Choose one of 5 reading languages and, if you want, a specific voice from those installed on your phone.",
         "Press Play to start reading — the current sentence is highlighted automatically.",
-        "Use ◀ PAGE / PAGE ▶ to navigate, ↺ to repeat the last sentence, and + BOOKMARK to name a passage to find again later.",
+        "Use ◀ SENTENCE / SENTENCE ▶ to go back or forward one sentence at a time (the page bar at the bottom changes page), ↺ to repeat the last sentence, and + BOOKMARK to name a passage to find again later.",
         "Open Library, Bookmarks or History from the dedicated buttons to find your documents.",
         "Set a sleep timer so playback stops automatically after X minutes."
       ],
@@ -1618,9 +1725,14 @@ body.immersion .controls {
   }
 
   // ——— UI Lang ———
+  function applyDataI18n(tr) {
+    document.querySelectorAll('[data-i18n]').forEach(el => { const v = tr[el.dataset.i18n]; if (v != null) el.textContent = v; });
+    document.querySelectorAll('[data-i18n-ph]').forEach(el => { const v = tr[el.dataset.i18nPh]; if (v != null) el.placeholder = v; });
+  }
   function setUILang(l) {
     uiLang = l;
     const tr = i18n[l];
+    applyDataI18n(tr);
     const installBanner = document.getElementById('installBanner');
     if (installBanner && installBanner.style.display !== 'none') {
       const mode = installBanner.dataset.mode;
@@ -2294,12 +2406,6 @@ body.immersion .controls {
     }
   }
 
-  textDisplay.oninput = () => {
-    upd();
-  };
-  textDisplay.onblur = () => {
-    applyCurrentPageEdit();
-  };
 
   document.getElementById('fontPlus').onclick = () => {
     currentFontSize = Math.min(32, currentFontSize + 1);
@@ -2381,6 +2487,7 @@ body.immersion .controls {
     upd();
     updatePageBar();
     savePosition();
+    updateProjectInfo();
   }
 
   function updatePageBar() {
@@ -2452,6 +2559,729 @@ body.immersion .controls {
     startSentenceSpeech();
   }
   document.getElementById('repeatBtn').onclick = repeatLastSentence;
+
+  // ——— Sentence navigation (◀ PHRASE / PHRASE ▶) ———
+  function moveSentence(delta) {
+    if (!pages.length) return;
+    if (!isPlaying) applyCurrentPageEdit();
+    if (!sentences.length) renderSentences(pages[currentPage] || '');
+    if (!sentences.length) return;
+    const wasPlaying = isPlaying && !isPaused;
+    try { synth.cancel(); } catch (_) {}
+    let idx = sentenceIndex + delta;
+    if (idx < 0) {
+      if (currentPage > 0) { currentPage--; showCurrentPage(); renderPdfViewer(); idx = Math.max(0, sentences.length - 1); }
+      else idx = 0;
+    } else if (idx >= sentences.length) {
+      if (currentPage < pages.length - 1) { currentPage++; showCurrentPage(); renderPdfViewer(); idx = 0; }
+      else idx = sentences.length - 1;
+    }
+    sentenceIndex = idx;
+    updatePageBar();
+    savePosition();
+    if (wasPlaying) {
+      isPlaying = true; isPaused = false;
+      document.body.classList.add('playing');
+      document.getElementById('playPauseBtn').textContent = t('pauseTxt');
+      startSentenceSpeech();
+    } else {
+      highlightSentence(idx);
+      const pr = (idx + 1) / Math.max(1, sentences.length);
+      prog.style.width = (pr * 100) + '%';
+      document.getElementById('pctInfo').textContent = Math.round(pr * 100) + '%';
+    }
+  }
+
+  // ——— Current project: Save updates it, edits are saved automatically ———
+  const placeholderTexts = () => [i18n.fr.defaultText, i18n.en.defaultText];
+  function currentProject() { return db.docs.find(d => d.id === currentDocId) || null; }
+  function updateProjectInfo(savedAt) {
+    const box = document.getElementById('projectInfo');
+    if (!box) return;
+    const p = currentProject();
+    if (!p) { box.style.display = 'none'; return; }
+    box.style.display = 'flex';
+    document.getElementById('projectInfoText').textContent = '📁 ' + p.title + (savedAt ? ' — ' + t('savedAt') + ' ' + savedAt : '');
+    document.getElementById('autoSaveChk').checked = db.autoSave !== false;
+  }
+  async function persistProject() {
+    const p = currentProject();
+    if (!p) return false;
+    p.text = allText;
+    p.date = new Date().toLocaleString();
+    dirtyDocs.add(p.id);
+    const ok = await flushDB();
+    if (ok) updateProjectInfo(new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }));
+    return ok;
+  }
+  let autoSaveTimer = null;
+  // Light save while typing: never re-renders the editor (the caret must not jump)
+  function autoSaveNow() {
+    const p = currentProject();
+    if (!p || isPlaying || db.autoSave === false) return;
+    const raw = textDisplay.innerText;
+    if (!raw.trim() || placeholderTexts().includes(raw.trim())) return;
+    const txt = serializeEditor();
+    if (pages.length > 1) { pages[currentPage] = txt; allText = pages.join('\n\n'); }
+    else { pages = [txt]; allText = txt; }
+    if (p.text !== allText) persistProject();
+  }
+  textDisplay.oninput = () => {
+    upd();
+    if (currentProject() && db.autoSave !== false) { clearTimeout(autoSaveTimer); autoSaveTimer = setTimeout(autoSaveNow, 1500); }
+  };
+  textDisplay.onblur = () => {
+    applyCurrentPageEdit();
+    clearTimeout(autoSaveTimer);
+    const p = currentProject();
+    if (p && db.autoSave !== false && !isPlaying && p.text !== allText && allText.trim()) persistProject();
+  };
+  document.getElementById('autoSaveChk').onchange = e => { db.autoSave = e.target.checked; saveDB(); };
+
+  async function saveCurrent(asNew) {
+    applyCurrentPageEdit();
+    if (!allText || allText.length < 15) { toast(t('noText')); return; }
+    if (storageMode === 'local' && localSize() > MAX_LOCAL_STORAGE * 0.95) { toast(t('storageFull')); return; }
+    const proj = asNew ? null : currentProject();
+    if (proj) {                                           // the open project is updated — no duplicate
+      if (await persistProject()) { renderLib(); toast(t('savedProject').replace('{t}', proj.title)); }
+      return;
+    }
+    const title = prompt(uiLang === 'fr' ? 'Nom du projet :' : 'Project name:', 'Doc ' + (db.docs.length + 1));
+    if (title === null) return;
+    const id = Date.now();
+    const previousDocs = db.docs.slice();
+    db.docs.unshift({ id, title: title.trim() || ('Doc ' + (db.docs.length + 1)), text: allText, date: new Date().toLocaleString() });
+    dirtyDocs.add(id);
+    const dropped = db.docs.length > MAX_DOCS ? db.docs.splice(MAX_DOCS) : [];
+    dropped.forEach(d => { deletedDocs.add(d.id); dirtyDocs.delete(d.id); });
+    const ok = await flushDB();
+    if (!ok) { db.docs = previousDocs; dirtyDocs.delete(id); dropped.forEach(d => deletedDocs.delete(d.id)); renderLib(); return; }
+    currentDocId = id;
+    requestPersistence();
+    renderLib();
+    updateProjectInfo(new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }));
+    toast(t('saved'));
+  }
+  document.getElementById('saveBtn').onclick = () => saveCurrent(false);
+  document.getElementById('saveAsBtn').onclick = () => saveCurrent(true);
+
+  // ═══════════════ Pronunciation lexicon + SSML-lite ═══════════════
+  // Browsers' speech engines do not read real SSML, so SIRVOX runs a small SSML subset itself:
+  //   <break time="500ms"/> · <prosody rate pitch volume> · <emphasis level> · <sub alias="…"> · <phoneme ph alias> (inner text is spoken)
+  // The lexicon replaces a word by its pronunciation ONLY when speaking (the text on screen never changes).
+  // For cloud / SSML-capable voices, the lexicon and the document can be exported as real SSML / PLS (see "Exports").
+  let lexCache = {};
+  const escRe = s => String(s).replace(/[.*+?^${}()|[\]\\\/]/g, '\\$&');
+  function lexMatcher(base) {
+    if (lexCache[base]) return lexCache[base];
+    const entries = (db.lexicon || []).filter(e => e && e.word && (e.lang === '*' || e.lang === base));
+    const map = new Map();
+    entries.forEach(e => { const k = e.word.toLowerCase(); if (!map.has(k)) map.set(k, []); map.get(k).push(e); });
+    let re = null;
+    if (map.size) {
+      const words = Array.from(map.keys()).sort((a, b) => b.length - a.length).map(escRe);
+      try { re = new RegExp('(^|[^\\p{L}\\p{N}_])(' + words.join('|') + ')(?![\\p{L}\\p{N}_])', 'giu'); } catch (_) { re = null; }
+    }
+    return (lexCache[base] = { re: re, map: map });
+  }
+  function lexChanged() { lexCache = {}; }
+  // text → [{text} | {text, entry}]
+  function lexSplit(text, base) {
+    const lm = lexMatcher(base);
+    if (!lm.re) return [{ text: text }];
+    const out = [];
+    let last = 0, m;
+    lm.re.lastIndex = 0;
+    while ((m = lm.re.exec(text)) !== null) {
+      const word = m[2], start = m.index + m[1].length;
+      const cands = lm.map.get(word.toLowerCase()) || [];
+      const entry = cands.find(e => e.cs && e.word === word) || cands.find(e => !e.cs);
+      if (!entry) continue;
+      if (start > last) out.push({ text: text.slice(last, start) });
+      out.push({ text: word, entry: entry });
+      last = start + word.length;
+    }
+    if (last < text.length) out.push({ text: text.slice(last) });
+    return out;
+  }
+
+  const RATE_WORDS = { 'x-slow': 0.55, slow: 0.8, medium: 1, fast: 1.25, 'x-fast': 1.5 };
+  const PITCH_WORDS = { 'x-low': 0.7, low: 0.85, medium: 1, high: 1.2, 'x-high': 1.4 };
+  const VOL_WORDS = { silent: 0, 'x-soft': 0.3, soft: 0.6, medium: 1, loud: 1, 'x-loud': 1 };
+  const BREAK_WORDS = { none: 0, 'x-weak': 100, weak: 200, medium: 400, strong: 700, 'x-strong': 1000 };
+  function relValue(v, words) {
+    if (v == null) return 1;
+    v = String(v).trim().toLowerCase();
+    if (Object.prototype.hasOwnProperty.call(words, v)) return words[v];
+    let m = /^([+-]?\d+(?:\.\d+)?)%$/.exec(v);
+    if (m) { const n = parseFloat(m[1]); return /^[+-]/.test(v) ? 1 + n / 100 : n / 100; }
+    m = /^([+-]?\d+(?:\.\d+)?)st$/.exec(v);
+    if (m) return Math.pow(2, parseFloat(m[1]) / 12);
+    m = /^\d+(?:\.\d+)?$/.exec(v);
+    return m ? parseFloat(v) : 1;
+  }
+  const tagAttr = (tag, name) => {
+    const m = new RegExp('\\b' + name + '\\s*=\\s*(?:"([^"]*)"|\'([^\']*)\')', 'i').exec(tag);
+    return m ? (m[1] !== undefined ? m[1] : m[2]) : null;
+  };
+  const decodeEnt = s => s.replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"').replace(/&apos;/g, "'").replace(/&amp;/g, '&');
+  const stripTags = s => String(s || '').replace(/<[^>]*>/g, '');
+
+  // "<prosody rate='slow'>é-lo-ime</prosody><break time='300ms'/>" → [{text, rate, pitch, vol, before}]
+  function parseSsmlLite(src) {
+    const segs = [];
+    const stack = [{ rate: 1, pitch: 1, vol: 1 }];
+    let buf = '', pending = 0, subAlias = null;
+    const top = () => stack[stack.length - 1];
+    const flush = () => {
+      if (buf.trim()) { const p = top(); segs.push({ text: buf, rate: p.rate, pitch: p.pitch, vol: p.vol, before: pending }); pending = 0; }
+      buf = '';
+    };
+    const re = /<\/?[a-zA-Z][^>]*>|[^<]+|</g;
+    let m;
+    while ((m = re.exec(String(src))) !== null) {
+      const tok = m[0];
+      if (tok.charAt(0) !== '<' || tok === '<') { if (subAlias === null) buf += decodeEnt(tok); continue; }
+      const close = tok.charAt(1) === '/';
+      const name = (/^<\/?\s*([a-zA-Z-]+)/.exec(tok) || [])[1];
+      const n = (name || '').toLowerCase();
+      if (n === 'break') {
+        flush();
+        let ms = 0;
+        const time = tagAttr(tok, 'time'), strength = tagAttr(tok, 'strength');
+        if (time) { const t = /^(\d+(?:\.\d+)?)\s*(ms|s)$/i.exec(time.trim()); if (t) ms = parseFloat(t[1]) * (t[2].toLowerCase() === 's' ? 1000 : 1); }
+        else if (strength && Object.prototype.hasOwnProperty.call(BREAK_WORDS, strength.toLowerCase())) ms = BREAK_WORDS[strength.toLowerCase()];
+        else ms = 400;
+        pending += Math.min(10000, ms);
+      } else if (n === 'prosody') {
+        flush();
+        if (close) { if (stack.length > 1) stack.pop(); }
+        else {
+          const p = top();
+          stack.push({ rate: p.rate * relValue(tagAttr(tok, 'rate'), RATE_WORDS), pitch: p.pitch * relValue(tagAttr(tok, 'pitch'), PITCH_WORDS), vol: p.vol * relValue(tagAttr(tok, 'volume'), VOL_WORDS) });
+        }
+      } else if (n === 'emphasis') {
+        flush();
+        if (close) { if (stack.length > 1) stack.pop(); }
+        else {
+          const lvl = (tagAttr(tok, 'level') || 'moderate').toLowerCase(), p = top();
+          const f = lvl === 'strong' ? [0.9, 1.1] : lvl === 'reduced' ? [1.05, 0.95] : lvl === 'none' ? [1, 1] : [0.95, 1.05];
+          stack.push({ rate: p.rate * f[0], pitch: p.pitch * f[1], vol: p.vol });
+        }
+      } else if (n === 'sub') {
+        if (!close) { const a = tagAttr(tok, 'alias'); if (a !== null) { buf += decodeEnt(a); subAlias = a; } }
+        else subAlias = null;
+      }
+      // speak, p, s, phoneme, say-as, lang, voice… : tags ignored, inner text is spoken
+    }
+    flush();
+    if (pending > 0) segs.push({ text: '', rate: 1, pitch: 1, vol: 1, before: pending });
+    return segs;
+  }
+
+  // One sentence → list of things to say (lexicon + SSML-lite + abbreviations + long-sentence pieces)
+  function speechPlan(sentence) {
+    const base = selectedLang.slice(0, 2).toLowerCase();
+    const plain = (txt, before) => ({ text: expandForSpeech(txt, selectedLang), rate: 1, pitch: 1, vol: 1, before: before || 0 });
+    const plan = [];
+    let buf = '';
+    const flush = () => { if (buf.trim()) plan.push(plain(buf)); buf = ''; };
+    lexSplit(sentence, base).forEach(p => {
+      if (!p.entry) { buf += p.text; return; }
+      const say = String(p.entry.say || '').trim();
+      if (!say) { buf += p.text; return; }
+      if (say.indexOf('<') < 0) { buf += say; return; }              // simple respelling: stays inside the same breath
+      flush();
+      parseSsmlLite(say).forEach(s => plan.push(s));
+    });
+    flush();
+    const out = [];
+    plan.forEach(seg => {
+      if (!seg.text.trim()) { out.push(seg); return; }
+      speechChunks(seg.text).forEach((c, i) => out.push(Object.assign({}, seg, { text: c, before: i === 0 ? seg.before : 0 })));
+    });
+    return out.length ? out : [plain(sentence)];
+  }
+
+  // Plays a plan piece by piece. ctx: { voice, rate, pitch, vol, isActive(), onDone(), onError() }
+  function speakPlan(plan, ctx) {
+    let i = 0;
+    const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+    const next = () => {
+      if (!ctx.isActive()) return;
+      if (i >= plan.length) { ctx.onDone(); return; }
+      const seg = plan[i++];
+      const go = () => {
+        if (!ctx.isActive()) return;
+        if (!seg.text || !seg.text.trim()) { next(); return; }
+        const utt = new SpeechSynthesisUtterance(seg.text);
+        currentUtterance = utt;
+        utt.lang = selectedLang;
+        if (ctx.voice) { try { utt.voice = ctx.voice; if (ctx.voice.lang) utt.lang = ctx.voice.lang; } catch (_) {} }
+        utt.rate = clamp(ctx.rate * seg.rate, 0.1, 10);
+        utt.pitch = clamp(ctx.pitch * seg.pitch, 0, 2);
+        utt.volume = clamp(ctx.vol * seg.vol, 0, 1);
+        utt.onend = () => { if (ctx.isActive()) next(); };
+        utt.onerror = ev => {
+          if (!ctx.isActive()) return;                                   // stale event from a cancelled utterance
+          if (ev && (ev.error === 'canceled' || ev.error === 'interrupted')) return;
+          ctx.onError();
+        };
+        synth.speak(utt);
+      };
+      if (seg.before > 0) setTimeout(go, seg.before); else go();
+    };
+    next();
+  }
+
+  // ═══════════════ Lexicon screen ═══════════════
+  let lexEditId = null, lexTestSeq = 0;
+  const $ = id => document.getElementById(id);
+  const LEX_LANGS = [['*', 'lexAll'], ['fr', null, 'Français'], ['en', null, 'English'], ['de', null, 'Deutsch'], ['es', null, 'Español'], ['pt', null, 'Português']];
+  const readFileText = f => (f.text ? f.text() : new Promise((res, rej) => { const r = new FileReader(); r.onload = () => res(r.result); r.onerror = () => rej(r.error); r.readAsText(f); }));
+  const xmlEsc = s => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  const attrEsc = s => xmlEsc(s).replace(/"/g, '&quot;');
+  function downloadFile(name, content, mime) {
+    const blob = new Blob([content], { type: mime + ';charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = name; document.body.appendChild(a); a.click();
+    setTimeout(() => { URL.revokeObjectURL(url); a.remove(); }, 1500);
+  }
+  function lexLangLabel(code) { const l = LEX_LANGS.find(x => x[0] === code); return !l ? code : (l[1] ? t(l[1]) : l[2]); }
+  function fillLexLangSelect() {
+    const sel = $('lexLang'), keep = sel.value || '*';
+    sel.innerHTML = LEX_LANGS.map(l => `<option value="${l[0]}">${l[1] ? t(l[1]) : l[2]}</option>`).join('');
+    sel.value = keep;
+  }
+  function resetLexForm() {
+    lexEditId = null;
+    ['lexWord', 'lexSay', 'lexIpa'].forEach(id => { $(id).value = ''; });
+    $('lexCase').checked = false;
+    $('lexLang').value = selectedLang.slice(0, 2);
+    $('lexCancelBtn').style.display = 'none';
+    $('lexSaveBtn').textContent = t('lexSave');
+  }
+  function renderLex() {
+    const q = $('lexSearch').value.trim().toLowerCase();
+    const list = (db.lexicon || []).filter(e => !q || e.word.toLowerCase().includes(q) || String(e.say || '').toLowerCase().includes(q))
+      .slice().sort((a, b) => a.word.localeCompare(b.word));
+    $('lexCount').textContent = (db.lexicon || []).length + ' ' + t('lexWords');
+    $('lexList').innerHTML = list.length ? list.map(e =>
+      `<div class="list-item">
+        <div style="flex:1;min-width:0"><b>${escapeHtml(e.word)}</b> → ${escapeHtml(stripTags(e.say) || '—')}${e.say && e.say.indexOf('<') >= 0 ? ' <small>(SSML)</small>' : ''}<br>
+          <small style="color:var(--muted)">${escapeHtml(lexLangLabel(e.lang))}${e.ipa ? ' · /' + escapeHtml(e.ipa) + '/' : ''}${e.cs ? ' · Aa' : ''}</small></div>
+        <div style="display:flex;gap:5px;flex-shrink:0">
+          <button class="btn-sec" data-lex-play="${e.id}">▶</button>
+          <button class="btn-sec" data-lex-edit="${e.id}">✎</button>
+          <button class="btn-sec" style="background:rgba(217,83,79,.15);color:var(--danger);border-color:var(--danger)" data-lex-del="${e.id}">✕</button>
+        </div></div>`).join('') : `<p style="color:var(--muted);font-size:12px">${t('lexEmpty')}</p>`;
+    $('lexList').querySelectorAll('[data-lex-play]').forEach(b => b.onclick = () => { const e = db.lexicon.find(x => String(x.id) === b.dataset.lexPlay); if (e) lexSpeak(e.say || e.word); });
+    $('lexList').querySelectorAll('[data-lex-edit]').forEach(b => b.onclick = () => {
+      const e = db.lexicon.find(x => String(x.id) === b.dataset.lexEdit); if (!e) return;
+      lexEditId = e.id; $('lexWord').value = e.word; $('lexSay').value = e.say || ''; $('lexIpa').value = e.ipa || '';
+      $('lexLang').value = e.lang; $('lexCase').checked = !!e.cs;
+      $('lexCancelBtn').style.display = 'inline-block'; $('lexSaveBtn').textContent = t('lexUpdate');
+      $('lexWord').focus();
+    });
+    $('lexList').querySelectorAll('[data-lex-del]').forEach(b => b.onclick = () => {
+      db.lexicon = db.lexicon.filter(x => String(x.id) !== b.dataset.lexDel);
+      lexChanged(); saveDB(); renderLex();
+    });
+  }
+  function lexSpeak(sayText) {
+    if (isPlaying && !isPaused) playPause();                      // pause the reading first
+    try { synth.cancel(); } catch (_) {}
+    const seq = ++lexTestSeq;
+    const src = String(sayText || '').trim();
+    if (!src) return;
+    const plan = src.indexOf('<') >= 0 ? parseSsmlLite(src) : [{ text: src, rate: 1, pitch: 1, vol: 1, before: 0 }];
+    speakPlan(plan, {
+      voice: selectedVoice || voicesForLang()[0] || null,
+      rate: parseFloat($('rate').value), pitch: parseFloat($('pitch').value), vol: parseFloat($('vol').value),
+      isActive: () => seq === lexTestSeq, onDone() {}, onError() {}
+    });
+  }
+  // The text editor must not keep the keyboard: release focus when a screen opens, and keep the focused field in view
+  function dropFocus() { try { const a = document.activeElement; if (a && a !== document.body && a.blur) a.blur(); } catch (_) {} }
+  ['lexOverlay', 'bibleOverlay'].forEach(id => $(id).addEventListener('focusin', e => {
+    const el = e.target;
+    if (el && /^(INPUT|SELECT|TEXTAREA)$/.test(el.tagName)) setTimeout(() => { try { el.scrollIntoView({ block: 'center', behavior: 'smooth' }); } catch (_) {} }, 350);
+  }));
+  function openLexicon(prefillWord) {
+    dropFocus();
+    fillLexLangSelect();
+    resetLexForm();
+    if (prefillWord) { $('lexWord').value = prefillWord; }
+    $('lexSearch').value = '';
+    renderLex();
+    $('lexOverlay').style.display = 'flex';
+    if (prefillWord) $('lexSay').focus();
+  }
+  let lexSelCapture = '';
+  const grabSelection = () => { try { lexSelCapture = String(window.getSelection().toString()).trim().slice(0, 60); } catch (_) { lexSelCapture = ''; } };
+  ['pointerdown', 'touchstart', 'mousedown'].forEach(ev => { $('lexBtn').addEventListener(ev, grabSelection, { passive: true }); $('lexQuickBtn').addEventListener(ev, grabSelection, { passive: true }); });
+  $('lexBtn').onclick = () => { openLexicon(lexSelCapture); lexSelCapture = ''; };
+  $('lexQuickBtn').onclick = () => { openLexicon(lexSelCapture); lexSelCapture = ''; };
+  $('lexCloseBtn').onclick = () => { lexTestSeq++; try { synth.cancel(); } catch (_) {} $('lexOverlay').style.display = 'none'; };
+  $('lexSearch').oninput = renderLex;
+  $('lexTestBtn').onclick = () => lexSpeak($('lexSay').value || $('lexWord').value);
+  $('lexCancelBtn').onclick = resetLexForm;
+  $('lexSaveBtn').onclick = () => {
+    const word = $('lexWord').value.trim(), say = $('lexSay').value.trim(), ipa = $('lexIpa').value.trim();
+    if (!word || (!say && !ipa)) { toast(t('lexNeed')); return; }
+    const lang = $('lexLang').value, cs = $('lexCase').checked;
+    if (!Array.isArray(db.lexicon)) db.lexicon = [];
+    const dupe = db.lexicon.find(e => e.id !== lexEditId && e.word.toLowerCase() === word.toLowerCase() && e.lang === lang && !!e.cs === cs);
+    const id = lexEditId || (dupe ? dupe.id : Date.now());
+    db.lexicon = db.lexicon.filter(e => e.id !== id && !(dupe && e.id === dupe.id));
+    db.lexicon.push({ id: id, word: word, say: say, ipa: ipa, lang: lang, cs: cs });
+    lexChanged(); saveDB(); resetLexForm(); renderLex(); toast(t('lexSaved'));
+  };
+
+  // ——— Import / export ———
+  $('lexExportJsonBtn').onclick = () => downloadFile('sirvox-lexique.json', JSON.stringify({ sirvoxLexicon: 1, entries: db.lexicon || [] }, null, 1), 'application/json');
+  $('lexImportBtn').onclick = () => $('lexImportInput').click();
+  $('lexImportInput').onchange = async e => {
+    const f = e.target.files[0]; e.target.value = '';
+    if (!f) return;
+    try {
+      const data = JSON.parse((await readFileText(f)).replace(/^\uFEFF/, ''));
+      const list = Array.isArray(data) ? data : data.entries;
+      if (!Array.isArray(list)) throw new Error('format');
+      if (!Array.isArray(db.lexicon)) db.lexicon = [];
+      let n = 0;
+      list.forEach((x, i) => {
+        if (!x || !x.word) return;
+        const lang = x.lang || '*', cs = !!x.cs;
+        const ex = db.lexicon.find(e => e.word.toLowerCase() === String(x.word).toLowerCase() && e.lang === lang && !!e.cs === cs);
+        const rec = { id: ex ? ex.id : Date.now() + i, word: String(x.word), say: String(x.say || ''), ipa: String(x.ipa || ''), lang: lang, cs: cs };
+        if (ex) Object.assign(ex, rec); else db.lexicon.push(rec);
+        n++;
+      });
+      lexChanged(); saveDB(); renderLex(); toast(n + ' ✓');
+    } catch (_) { toast(t('lexBadFile')); }
+  };
+  // W3C Pronunciation Lexicon (PLS) for the current reading language — usable with cloud TTS services
+  $('lexExportPlsBtn').onclick = () => {
+    const base = selectedLang.slice(0, 2);
+    const entries = (db.lexicon || []).filter(e => e.lang === '*' || e.lang === base);
+    const body = entries.map(e => '  <lexeme>\n    <grapheme>' + xmlEsc(e.word) + '</grapheme>\n    ' +
+      (e.ipa ? '<phoneme>' + xmlEsc(e.ipa) + '</phoneme>' : '<alias>' + xmlEsc(stripTags(e.say) || e.word) + '</alias>') + '\n  </lexeme>').join('\n');
+    downloadFile('sirvox-lexique-' + base + '.pls',
+      '<?xml version="1.0" encoding="UTF-8"?>\n<lexicon version="1.0" xmlns="http://www.w3.org/2005/01/pronunciation-lexicon" alphabet="ipa" xml:lang="' + selectedLang + '">\n' + body + '\n</lexicon>\n',
+      'application/pls+xml');
+  };
+  // The whole document as SSML, with the lexicon applied (IPA → <phoneme>, otherwise <sub alias>)
+  function buildSsml() {
+    applyCurrentPageEdit();
+    const base = selectedLang.slice(0, 2);
+    const sentenceXml = s => lexSplit(s, base).map(p => {
+      if (!p.entry) return xmlEsc(expandForSpeech(p.text, selectedLang));
+      const e = p.entry;
+      if (e.ipa) return '<phoneme alphabet="ipa" ph="' + attrEsc(e.ipa) + '">' + xmlEsc(p.text) + '</phoneme>';
+      if (e.say) return '<sub alias="' + attrEsc(stripTags(e.say)) + '">' + xmlEsc(p.text) + '</sub>';
+      return xmlEsc(p.text);
+    }).join('');
+    const out = [];
+    splitIntoParagraphs(allText).forEach(par => {
+      const heading = isHeadingLike(par);
+      const txt = stripMarks(par).split(/\n+/).map(x => x.trim()).filter(Boolean).join(' ');
+      const sents = splitIntoSentences(txt);
+      if (!sents.length) return;
+      out.push('  <p>' + sents.map(s => '<s>' + sentenceXml(s) + '</s>').join(' ') + '</p>' + (heading ? '\n  <break time="700ms"/>' : ''));
+    });
+    return '<?xml version="1.0" encoding="UTF-8"?>\n<speak version="1.0" xmlns="http://www.w3.org/2001/10/synthesis" xml:lang="' + selectedLang + '">\n' + out.join('\n') + '\n</speak>\n';
+  }
+  $('lexExportSsmlBtn').onclick = () => {
+    if (!allText || allText.length < 5) { toast(t('noText')); return; }
+    const p = currentProject();
+    downloadFile(((p && p.title) || 'sirvox').replace(/[^\w\-. ]+/g, '_') + '.ssml', buildSsml(), 'application/ssml+xml');
+  };
+
+  // ═══════════════ Offline Bible ═══════════════
+  // Versions ("packs") are stored in the app's own IndexedDB: after one installation everything works offline.
+  // Built-in downloads: Louis Segond 1910 (FR) and King James (EN) — both public domain.
+  // Copyrighted versions (NKJV, La Bible du Semeur…) are NOT included: import your own licensed file.
+  const BOOKS_FR = ['Genèse','Exode','Lévitique','Nombres','Deutéronome','Josué','Juges','Ruth','1 Samuel','2 Samuel','1 Rois','2 Rois','1 Chroniques','2 Chroniques','Esdras','Néhémie','Esther','Job','Psaumes','Proverbes','Ecclésiaste','Cantique des Cantiques','Ésaïe','Jérémie','Lamentations','Ézéchiel','Daniel','Osée','Joël','Amos','Abdias','Jonas','Michée','Nahum','Habacuc','Sophonie','Aggée','Zacharie','Malachie','Matthieu','Marc','Luc','Jean','Actes','Romains','1 Corinthiens','2 Corinthiens','Galates','Éphésiens','Philippiens','Colossiens','1 Thessaloniciens','2 Thessaloniciens','1 Timothée','2 Timothée','Tite','Philémon','Hébreux','Jacques','1 Pierre','2 Pierre','1 Jean','2 Jean','3 Jean','Jude','Apocalypse'];
+  const BOOKS_EN = ['Genesis','Exodus','Leviticus','Numbers','Deuteronomy','Joshua','Judges','Ruth','1 Samuel','2 Samuel','1 Kings','2 Kings','1 Chronicles','2 Chronicles','Ezra','Nehemiah','Esther','Job','Psalms','Proverbs','Ecclesiastes','Song of Solomon','Isaiah','Jeremiah','Lamentations','Ezekiel','Daniel','Hosea','Joel','Amos','Obadiah','Jonah','Micah','Nahum','Habakkuk','Zephaniah','Haggai','Zechariah','Malachi','Matthew','Mark','Luke','John','Acts','Romans','1 Corinthians','2 Corinthians','Galatians','Ephesians','Philippians','Colossians','1 Thessalonians','2 Thessalonians','1 Timothy','2 Timothy','Titus','Philemon','Hebrews','James','1 Peter','2 Peter','1 John','2 John','3 John','Jude','Revelation'];
+  // Texts that can be installed with one tap. Every file is public domain and must sit next to index.html.
+  // (NKJV and La Bible du Semeur are copyrighted and are deliberately absent: import your own licensed file instead.)
+  const BIBLE_CATALOG = [
+    { id: 'lsg1910', file: 'bible-lsg.json', name: 'Louis Segond 1910', fr: 'français, domaine public', en: 'French, public domain' },
+    { id: 'kjv', file: 'bible-kjv.json', name: 'King James Version', fr: 'anglais, domaine public', en: 'English, public domain' },
+    { id: 'akjv', file: 'bible-akjv.json', name: 'American King James Version', fr: 'anglais — KJV au vocabulaire modernisé (proche de la NKJV), domaine public', en: 'English — KJV with modernised wording (close to the NKJV), public domain' },
+    { id: 'bsb', file: 'bible-bsb.json', name: 'Berean Standard Bible', fr: 'anglais moderne et très lisible, domaine public (2023)', en: 'modern, very readable English, public domain (2023)' }
+  ];
+  const bibleCache = new Map();           // id → full pack (kept for the last versions used)
+  let bibleBasket = [];                   // [{pack, book, from, to}]
+  let bibleCurrent = null;                // pack shown in the pickers
+
+  const bibleMeta = () => (Array.isArray(db.biblePacks) ? db.biblePacks : (db.biblePacks = []));
+  function bookName(pack, i) {
+    if (pack.names && pack.names[i]) return pack.names[i];
+    return ((pack.lang === 'fr' ? BOOKS_FR : BOOKS_EN)[i]) || ('#' + (i + 1));
+  }
+  async function bibleGet(id) {
+    if (bibleCache.has(id)) return bibleCache.get(id);
+    if (!idb) return null;
+    const rec = await idbRun(['bible'], 'readonly', (tx, out) => { tx.objectStore('bible').get(id).onsuccess = e => out(e.target.result); });
+    if (rec) { if (bibleCache.size >= 2) bibleCache.delete(bibleCache.keys().next().value); bibleCache.set(id, rec); }
+    return rec || null;
+  }
+  async function installPack(pack) {
+    if (!idb) throw new Error('no-idb');
+    if (!pack || !Array.isArray(pack.books) || !pack.books.length) throw new Error('format');
+    let verses = 0, chapters = 0;
+    pack.books.forEach(b => { if (!Array.isArray(b)) throw new Error('format'); chapters += b.length; b.forEach(c => { if (!Array.isArray(c)) throw new Error('format'); verses += c.length; }); });
+    if (verses < 50) throw new Error('format');
+    const rec = Object.assign({ v: 1, added: Date.now() }, pack);
+    await idbRun(['bible'], 'readwrite', tx => { tx.objectStore('bible').put(rec); });
+    bibleCache.delete(rec.id); bibleCache.set(rec.id, rec);
+    const meta = bibleMeta().filter(m => m.id !== rec.id);
+    meta.push({ id: rec.id, name: rec.name, short: rec.short || rec.name, lang: rec.lang, license: rec.license || '', verses: verses, chapters: chapters });
+    db.biblePacks = meta;
+    saveDB();
+  }
+  async function removePack(id) {
+    await idbRun(['bible'], 'readwrite', tx => { tx.objectStore('bible').delete(id); });
+    bibleCache.delete(id);
+    db.biblePacks = bibleMeta().filter(m => m.id !== id);
+    bibleBasket = bibleBasket.filter(b => b.pack !== id);
+    saveDB();
+  }
+
+  // ——— Reading files: our JSON, the common "[{name, chapters:[[…]]}]" JSON, Zefania / OSIS-like XML ———
+  const cleanVerse = s => String(s == null ? '' : s).replace(/<[^>]*>/g, '').replace(/\s+/g, ' ').trim();
+  function parseBibleText(text, meta) {
+    const s = String(text).replace(/^\uFEFF/, '').trim();
+    let books = null, names = null, info = {};
+    if (s.charAt(0) === '{' || s.charAt(0) === '[') {
+      const data = JSON.parse(s);
+      if (Array.isArray(data)) {
+        books = data.map(b => (b.chapters || []).map(ch => (ch || []).map(cleanVerse)));
+        names = data.map(b => b.name || b.abbrev || '');
+      } else if (data && Array.isArray(data.books)) {
+        books = data.books.map(b => (Array.isArray(b) ? b : (b.c || b.chapters || [])).map(ch => (ch || []).map(cleanVerse)));
+        names = Array.isArray(data.names) ? data.names : null;
+        info = { id: data.id, name: data.name, short: data.short, lang: data.lang, license: data.license };
+      }
+    } else if (s.charAt(0) === '<') {
+      const doc = new DOMParser().parseFromString(s, 'application/xml');
+      if (doc.getElementsByTagName('parsererror').length) throw new Error('xml');
+      const root = doc.documentElement;
+      const kids = (el, ...tags) => Array.from(el.children).filter(c => tags.indexOf(c.localName) >= 0 || tags.indexOf(c.localName.toLowerCase()) >= 0);
+      const bookEls = Array.from(doc.getElementsByTagName('book')).concat(Array.from(doc.getElementsByTagName('BIBLEBOOK')));
+      books = []; names = [];
+      bookEls.forEach(be => {
+        const chs = [];
+        Array.from(be.getElementsByTagName('chapter')).concat(Array.from(be.getElementsByTagName('CHAPTER'))).forEach((ce, ci) => {
+          const n = parseInt(ce.getAttribute('number') || ce.getAttribute('cnumber'), 10);
+          const vs = [];
+          Array.from(ce.getElementsByTagName('verse')).concat(Array.from(ce.getElementsByTagName('VERS'))).forEach(ve => vs.push(cleanVerse(ve.textContent)));
+          chs[(n > 0 ? n : ci + 1) - 1] = vs;
+        });
+        for (let i = 0; i < chs.length; i++) if (!chs[i]) chs[i] = [];
+        books.push(chs);
+        names.push(be.getAttribute('bname') || be.getAttribute('name') || '');
+      });
+      info = { name: root.getAttribute('translation') || root.getAttribute('biblename') || '' };
+    }
+    if (!books || !books.length) throw new Error('format');
+    const lang = (meta.lang || info.lang || 'en').toLowerCase();
+    const name = meta.name || info.name || 'Bible';
+    const slug = (meta.short || name).toLowerCase().replace(/[^a-z0-9]+/g, '').slice(0, 20) || ('b' + Date.now());
+    const pack = { v: 1, id: info.id || slug, name: name, short: meta.short || info.short || name.slice(0, 12), lang: lang, license: info.license || meta.license || '', books: books };
+    const std = books.length === 66 && (lang === 'fr' || lang === 'en');
+    if (!std && names && names.some(Boolean)) pack.names = names;
+    return pack;
+  }
+
+  // ——— Screen ———
+  const bibleLangBase = () => (bibleCurrent && bibleCurrent.lang) || 'fr';
+  function setReadingLangBase(base) {
+    if (selectedLang.slice(0, 2) === base) return;
+    const l = langs.find(x => x.code.slice(0, 2) === base);
+    if (!l) return;
+    selectedLang = l.code;
+    renderLangList();
+    populateVoiceSelect();
+  }
+  function bibleSelection() {
+    if (!bibleCurrent) return null;
+    const book = parseInt($('bibleBook').value, 10) || 0;
+    let from = parseInt($('bibleFrom').value, 10) || 1, to = parseInt($('bibleTo').value, 10) || from;
+    if (to < from) to = from;
+    return { pack: bibleCurrent.id, book: book, from: from, to: to };
+  }
+  const bibleItems = () => (bibleBasket.length ? bibleBasket.slice() : (bibleSelection() ? [bibleSelection()] : []));
+
+  async function bibleCompose(items, withNums) {
+    const marked = [], plain = [];
+    let lang = null, first = null;
+    for (const it of items) {
+      const pack = await bibleGet(it.pack);
+      if (!pack || !pack.books[it.book]) continue;
+      if (!lang) lang = pack.lang;
+      const name = bookName(pack, it.book);
+      for (let c = it.from; c <= it.to; c++) {
+        const vs = pack.books[it.book][c - 1];
+        if (!vs || !vs.length) continue;
+        const heading = name + ' ' + c;
+        if (!first) first = heading;
+        const body = vs.map((v, i) => (withNums ? (i + 1) + ' ' : '') + v).join(' ');
+        marked.push(MK_H1 + heading + '\n\n' + MK_BODY + body);
+        plain.push(heading + '\n\n' + body);
+      }
+    }
+    return { marked: marked.join('\n\n'), plain: plain.join('\n\n'), lang: lang, first: first };
+  }
+  let biblePreviewToken = 0;
+  async function updateBiblePreview() {
+    const my = ++biblePreviewToken;
+    const items = bibleItems();
+    const box = $('biblePreview');
+    if (!items.length) { box.textContent = ''; return; }
+    const r = await bibleCompose(items, $('bibleNums').checked);
+    if (my !== biblePreviewToken) return;
+    const LIMIT = 40000;
+    const txt = r.plain.length > LIMIT ? r.plain.slice(0, LIMIT) + '…' : r.plain;
+    box.innerHTML = escapeHtml(txt).replace(/(^|\n\n)([^\n]+)\n\n/g, (m, a, h) => a + '<div class="bp-h">' + h + '</div>');
+    $('bibleTruncNote').style.display = r.plain.length > LIMIT ? 'block' : 'none';
+  }
+  function renderBasket() {
+    $('bibleBasket').innerHTML = bibleBasket.map((it, i) => {
+      const m = bibleMeta().find(x => x.id === it.pack);
+      const rec = bibleCache.get(it.pack);
+      const nm = rec ? bookName(rec, it.book) : '#' + (it.book + 1);
+      return `<span class="chip">${escapeHtml((m && m.short) || '')} · ${escapeHtml(nm)} ${it.from === it.to ? it.from : it.from + '–' + it.to}<button type="button" data-rm="${i}">✕</button></span>`;
+    }).join('');
+    $('bibleBasketWrap').style.display = bibleBasket.length ? 'block' : 'none';
+    $('bibleBasket').querySelectorAll('[data-rm]').forEach(b => b.onclick = () => { bibleBasket.splice(parseInt(b.dataset.rm, 10), 1); renderBasket(); updateBiblePreview(); });
+  }
+  function fillChapterSelects(keepFrom, keepTo) {
+    const n = bibleCurrent ? (bibleCurrent.books[parseInt($('bibleBook').value, 10) || 0] || []).length : 0;
+    const opts = Array.from({ length: n }, (_, i) => `<option value="${i + 1}">${i + 1}</option>`).join('');
+    $('bibleFrom').innerHTML = opts; $('bibleTo').innerHTML = opts;
+    if (keepFrom && keepFrom <= n) $('bibleFrom').value = keepFrom;
+    $('bibleTo').value = keepTo && keepTo <= n ? keepTo : $('bibleFrom').value;
+  }
+  async function loadVersionPickers() {
+    const metas = bibleMeta();
+    const prevVersion = $('bibleVersion').value;
+    $('bibleVersion').innerHTML = metas.map(m => `<option value="${escapeHtml(m.id)}">${escapeHtml(m.short || m.name)} — ${escapeHtml(m.name)}</option>`).join('');
+    $('biblePickers').style.display = metas.length ? 'block' : 'none';
+    if (!metas.length) $('bibleManage').open = true;
+    $('bibleNone').style.display = metas.length ? 'none' : 'block';
+    $('bibleInstalledList').innerHTML = metas.map(m =>
+      `<div class="list-item"><div style="flex:1;min-width:0"><b>${escapeHtml(m.short || m.name)}</b> — ${escapeHtml(m.name)}<br><small style="color:var(--muted)">${escapeHtml((m.lang || '').toUpperCase())} · ${m.chapters} ch. · ${m.verses} v.${m.license ? ' · ' + escapeHtml(m.license) : ''}</small></div>
+       <button class="btn-sec" style="background:rgba(217,83,79,.15);color:var(--danger);border-color:var(--danger);flex:0 0 auto" data-pack-del="${escapeHtml(m.id)}">✕</button></div>`).join('');
+    $('bibleInstalledList').querySelectorAll('[data-pack-del]').forEach(b => b.onclick = async () => {
+      if (!confirm(t('bibleConfirmDel'))) return;
+      await removePack(b.dataset.packDel); bibleCurrent = null; await loadVersionPickers(); renderBasket();
+    });
+    $('bibleCatalog').innerHTML = BIBLE_CATALOG.filter(c => !metas.some(m => m.id === c.id)).map(c =>
+      `<button type="button" class="btn-sec" style="width:100%;margin-top:8px;text-align:left" data-cat="${c.id}">⬇ ${t('bibleInstallLbl')} ${escapeHtml(c.name)}<br><small style="font-weight:400;color:var(--muted)">${escapeHtml(uiLang === 'fr' ? c.fr : c.en)}</small></button>`).join('');
+    $('bibleCatalog').querySelectorAll('[data-cat]').forEach(btn => btn.onclick = () => bibleDownload(BIBLE_CATALOG.find(c => c.id === btn.dataset.cat).file));
+    if (!metas.length) { bibleCurrent = null; $('biblePreview').textContent = ''; return; }
+    const id = metas.some(m => m.id === prevVersion) ? prevVersion : metas[0].id;
+    $('bibleVersion').value = id;
+    bibleCurrent = await bibleGet(id);
+    if (!bibleCurrent) return;
+    const keep = parseInt($('bibleBook').value, 10) || 0;
+    $('bibleBook').innerHTML = bibleCurrent.books.map((_, i) => `<option value="${i}">${escapeHtml(bookName(bibleCurrent, i))}</option>`).join('');
+    $('bibleBook').value = keep < bibleCurrent.books.length ? keep : 0;
+    fillChapterSelects();
+    updateBiblePreview();
+  }
+  async function openBible() {
+    if (storageMode !== 'idb') { toast(t('bibleNoIdb')); return; }
+    $('bibleStatus').textContent = '';
+    dropFocus();
+    $('bibleOverlay').style.display = 'flex';
+    await loadVersionPickers();
+    renderBasket();
+  }
+  async function bibleDownload(file, statusKey) {
+    const st = $('bibleStatus');
+    st.style.color = 'var(--muted)';
+    if (navigator.onLine === false) { st.textContent = t('bibleNeedsNet'); st.style.color = '#d9534f'; return; }
+    st.textContent = t('bibleInstalling');
+    try {
+      const r = await fetch(file, { cache: 'no-store' });
+      if (!r.ok) throw new Error('http ' + r.status);
+      await installPack(await r.json());
+      st.textContent = t('bibleInstalled');
+      await loadVersionPickers();
+    } catch (e) {
+      console.error('Bible install failed:', e);
+      st.textContent = (e && /http 404/.test(e.message)) ? t('bibleFile404').replace('{f}', file) : t('bibleErr');
+      st.style.color = '#d9534f';
+    }
+  }
+  async function bibleInsert(thenPlay) {
+    const items = bibleItems();
+    if (!items.length) return;
+    const r = await bibleCompose(items, $('bibleNums').checked);
+    if (!r.marked) return;
+    if (isPlaying || isPaused) stopSpeech(true);
+    applyCurrentPageEdit();
+    const append = $('bibleMode').value === 'append';
+    const existing = (allText || '').trim();
+    const hasText = existing && !placeholderTexts().includes(stripMarks(existing).trim());
+    if (append && hasText) { allText = existing.replace(/\s+$/, '') + '\n\n' + r.marked; }
+    else { allText = r.marked; currentDocId = 'bible_' + Date.now(); }
+    sentenceIndex = 0;
+    splitPages(allText, { history: false });
+    if (append && hasText && r.first) {
+      const pi = pages.findIndex(p => stripMarks(p).indexOf(r.first) >= 0 && existing.indexOf(r.first) < 0);
+      if (pi > 0) goPage(pi);
+    }
+    if (r.lang) setReadingLangBase(r.lang);
+    $('bibleOverlay').style.display = 'none';
+    toast(t('bibleInserted'));
+    if (thenPlay) playPause();
+  }
+
+  $('bibleBtn').onclick = openBible;
+  $('bibleCloseBtn').onclick = () => { $('bibleOverlay').style.display = 'none'; };
+  $('bibleVersion').onchange = async () => { bibleBasket = []; $('bibleBook').value = 0; await loadVersionPickers(); renderBasket(); };
+  $('bibleBook').onchange = () => { fillChapterSelects(); updateBiblePreview(); };
+  $('bibleFrom').onchange = () => { if (parseInt($('bibleTo').value, 10) < parseInt($('bibleFrom').value, 10)) $('bibleTo').value = $('bibleFrom').value; updateBiblePreview(); };
+  $('bibleTo').onchange = () => { if (parseInt($('bibleTo').value, 10) < parseInt($('bibleFrom').value, 10)) $('bibleFrom').value = $('bibleTo').value; updateBiblePreview(); };
+  $('bibleWhole').onclick = () => { const n = $('bibleTo').options.length; $('bibleFrom').value = 1; $('bibleTo').value = n; updateBiblePreview(); };
+  $('bibleNums').onchange = updateBiblePreview;
+  $('bibleAddBtn').onclick = () => { const s = bibleSelection(); if (!s) return; bibleBasket.push(s); renderBasket(); updateBiblePreview(); };
+  $('bibleCopyBtn').onclick = async () => {
+    const r = await bibleCompose(bibleItems(), $('bibleNums').checked);
+    if (!r.plain) return;
+    try { await navigator.clipboard.writeText(r.plain); toast(t('bibleCopied')); }
+    catch (_) {
+      const ta = document.createElement('textarea'); ta.value = r.plain; document.body.appendChild(ta); ta.select();
+      try { document.execCommand('copy'); toast(t('bibleCopied')); } catch (__) {}
+      ta.remove();
+    }
+  };
+  $('bibleInsertBtn').onclick = () => bibleInsert(false);
+  $('biblePlayBtn').onclick = () => bibleInsert(true);
+  $('bibleImportBtn').onclick = () => {
+    if (!$('bibleImportName').value.trim()) { toast(t('bibleNeedName')); $('bibleImportName').focus(); return; }
+    $('bibleImportInput').click();
+  };
+  $('bibleImportInput').onchange = async e => {
+    const f = e.target.files[0]; e.target.value = '';
+    if (!f) return;
+    const st = $('bibleStatus'); st.style.color = 'var(--muted)'; st.textContent = t('bibleInstalling');
+    try {
+      const name = $('bibleImportName').value.trim();
+      const pack = parseBibleText(await readFileText(f), { name: name, short: name.slice(0, 12), lang: $('bibleImportLang').value, license: t('bibleOwnLicense') });
+      await installPack(pack);
+      st.textContent = t('bibleInstalled');
+      $('bibleImportName').value = '';
+      await loadVersionPickers();
+    } catch (err) { console.error(err); st.textContent = t('bibleErr'); st.style.color = '#d9534f'; }
+  };
 
   // ——— Sleep / study timer ———
   let sleepTimerId = null;
@@ -2533,8 +3363,8 @@ body.immersion .controls {
     highlightSentence(sentenceIndex);
     savePosition();
 
-    // The abbreviations are spoken in full ("Dr." → "Docteur") — the text on screen is untouched.
-    const chunks = speechChunks(expandForSpeech(sentence, selectedLang));
+    // Lexicon words, SSML-lite tags and abbreviations are resolved here — the text on screen is untouched.
+    const plan = speechPlan(sentence);
     let voiceToUse = selectedVoice;
     if (!voiceToUse) {
       // Voices can finish loading after the language was picked: re-check right before speaking.
@@ -2546,33 +3376,16 @@ body.immersion .controls {
     prog.style.width = (progress * 100) + '%';
     document.getElementById('pctInfo').textContent = Math.round(progress * 100) + '%';
 
-    const speakChunk = (ci) => {
-      const utt = new SpeechSynthesisUtterance(chunks[ci]);
-      currentUtterance = utt;
-      utt.lang = selectedLang;
-      if (voiceToUse) {
-        try { utt.voice = voiceToUse; if (voiceToUse.lang) utt.lang = voiceToUse.lang; } catch (_) { /* fall back to .lang alone */ }
-      }
-      utt.rate = rateNow;
-      utt.pitch = parseFloat(document.getElementById('pitch').value);
-      utt.volume = parseFloat(document.getElementById('vol').value);
-      utt.onend = () => {
-        if (utt !== currentUtterance || !isPlaying || isPaused) return;
-        if (ci + 1 < chunks.length) { speakChunk(ci + 1); return; }   // same sentence, next piece
-        sentenceIndex++;
-        startSentenceSpeech();
-      };
-      utt.onerror = (ev) => {
-        if (utt !== currentUtterance) return;                       // stale event from a cancelled utterance
-        if (ev && (ev.error === 'canceled' || ev.error === 'interrupted')) return;
-        if (isPlaying && !isPaused) {
-          sentenceIndex++;
-          setTimeout(() => startSentenceSpeech(), 80);
-        }
-      };
-      synth.speak(utt);
-    };
-    speakChunk(0);
+    const mySeq = ++speechSeq;
+    speakPlan(plan, {
+      voice: voiceToUse,
+      rate: rateNow,
+      pitch: parseFloat(document.getElementById('pitch').value),
+      vol: parseFloat(document.getElementById('vol').value),
+      isActive: () => mySeq === speechSeq && isPlaying && !isPaused,
+      onDone: () => { sentenceIndex++; startSentenceSpeech(); },
+      onError: () => { sentenceIndex++; setTimeout(() => startSentenceSpeech(), 80); }
+    });
   }
 
   function stopSpeech(keepPage) {
@@ -2837,8 +3650,8 @@ body.immersion .controls {
     }
   };
 
-  document.getElementById('prevBtn').onclick = () => { if (currentPage > 0) goPage(currentPage - 1); };
-  document.getElementById('nextBtn').onclick = () => { if (currentPage < pages.length - 1) goPage(currentPage + 1); };
+  document.getElementById('prevBtn').onclick = () => moveSentence(-1);
+  document.getElementById('nextBtn').onclick = () => moveSentence(1);
   document.getElementById('pageBarPrev').onclick = () => { if (currentPage > 0) goPage(currentPage - 1); };
   document.getElementById('pageBarNext').onclick = () => { if (currentPage < pages.length - 1) goPage(currentPage + 1); };
 
@@ -2882,35 +3695,6 @@ body.immersion .controls {
   }
 
   // ——— Library with rename ———
-  document.getElementById('saveBtn').onclick = async () => {
-    if (!allText || allText.length < 15) { toast(t('noText')); return; }
-    if (storageMode === 'local' && localSize() > MAX_LOCAL_STORAGE * 0.95) { toast(t('storageFull')); return; }
-
-    const title = prompt(uiLang === 'fr' ? 'Nom du document :' : 'Document name:', 'Doc ' + (db.docs.length + 1));
-    if (title === null) return;
-
-    const id = Date.now();
-    const previousDocs = db.docs.slice();
-    db.docs.unshift({
-      id,
-      title: title.trim() || ('Doc ' + (db.docs.length + 1)),
-      text: allText,                                 // plus de limite de longueur : livres entiers acceptés
-      date: new Date().toLocaleString()
-    });
-    dirtyDocs.add(id);
-    const dropped = db.docs.length > MAX_DOCS ? db.docs.splice(MAX_DOCS) : [];
-    dropped.forEach(d => { deletedDocs.add(d.id); dirtyDocs.delete(d.id); });
-    const ok = await flushDB();
-    if (!ok) {                                       // the browser refused: do not pretend it was saved
-      db.docs = previousDocs; dirtyDocs.delete(id); dropped.forEach(d => deletedDocs.delete(d.id));
-      renderLib(); return;
-    }
-    currentDocId = id;
-    requestPersistence();
-    renderLib();
-    toast(t('saved'));
-  };
-
   function addHistory(snippet) {
     db.history.unshift({ id: Date.now(), t: snippet, date: new Date().toLocaleTimeString() });
     if (db.history.length > 12) db.history.pop();
@@ -2969,7 +3753,8 @@ body.immersion .controls {
         db.docs = db.docs.filter(d => d.id != btn.dataset.del);
         deletedDocs.add(Number(btn.dataset.del)); dirtyDocs.delete(Number(btn.dataset.del));
         delete db.positions[btn.dataset.del];
-        saveDB(); renderLib();
+        if (String(currentDocId) === String(btn.dataset.del)) currentDocId = null;
+        saveDB(); renderLib(); updateProjectInfo();
       };
     });
     el.querySelectorAll('[data-rename]').forEach(btn => {
@@ -2980,7 +3765,7 @@ body.immersion .controls {
         if (newName !== null && newName.trim()) {
           d.title = newName.trim();
           dirtyDocs.add(d.id);
-          saveDB(); renderLib();
+          saveDB(); renderLib(); updateProjectInfo();
         }
       };
     });

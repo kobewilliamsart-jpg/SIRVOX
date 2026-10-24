@@ -1,5 +1,5 @@
 /* SIRVOX service worker — le cache change à chaque version (index.html enregistre sw.js?v=APP_VERSION) */
-const VERSION = new URL(self.location.href).searchParams.get('v') || '8.8.3';
+const VERSION = new URL(self.location.href).searchParams.get('v') || '9.1.1';
 const CACHE = 'sirvox-' + VERSION;
 const CORE = [
   './', './index.html', './manifest.json',
@@ -51,6 +51,7 @@ self.addEventListener('fetch', e => {
   const url = new URL(req.url);
   const same = url.origin === self.location.origin;
   if (!same && RUNTIME_HOSTS.indexOf(url.hostname) === -1) return;
+  if (same && /\/bible-[^/]*\.json$/.test(url.pathname)) return;   // Bible packs live in IndexedDB, not in the cache (no double storage)
   if (req.mode === 'navigate' || (same && /(\/|index\.html|manifest\.json)$/.test(url.pathname))) { e.respondWith(networkFirst(req)); return; }
   e.respondWith(cacheFirst(req));
 });
